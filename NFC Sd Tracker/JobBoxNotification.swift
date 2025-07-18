@@ -17,8 +17,14 @@ struct JobBoxNotification: View {
                     let hours = item.1 / 3600
                     
                     HStack {
-                        Text("Box #\(record.boxNumber)")
-                            .fontWeight(.semibold)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("#\(record.boxNumber)")
+                                .fontWeight(.semibold)
+                            
+                            Text(record.school)
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.9))
+                        }
                         
                         Spacer()
                         
@@ -57,17 +63,3 @@ struct JobBoxNotification: View {
     }
 }
 
-struct JobBoxNotification_Previews: PreviewProvider {
-    static var previews: some View {
-        ZStack {
-            Color.gray
-            
-            JobBoxNotification(
-                jobBoxes: [
-                    (JobBoxRecord(id: "1", timestamp: Date().addingTimeInterval(-60000), photographer: "John", boxNumber: "3001", school: "Sample School", status: "Left Job", organizationID: "sample"), 60000),
-                    (JobBoxRecord(id: "2", timestamp: Date().addingTimeInterval(-200000), photographer: "Jane", boxNumber: "3002", school: "Sample School", status: "Left Job", organizationID: "sample"), 200000)
-                ]
-            )
-        }
-    }
-}

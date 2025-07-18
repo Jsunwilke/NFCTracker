@@ -6,17 +6,19 @@ struct JobBoxFormView: View {
     @Binding var selectedStatus: String
     let lastRecord: JobBoxRecord?
     
-    var onSubmit: (String, String, @escaping (Bool) -> Void) -> Void
+    var onSubmit: (String, String?, @escaping (Bool) -> Void) -> Void // Updated to include shiftUid
     var onCancel: () -> Void
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var sessionManager: SessionManager
     
     @State private var localPhotographer: String = ""
+    @State private var selectedShift: Shift? = nil
     
     @State private var isSubmitting = false
     @State private var showAlert = false
     @State private var alertMessage = ""
+    @State private var showShiftSelection = false
     
     // For photographers & schools
     @State private var photographerNames: [String] = []
@@ -42,9 +44,14 @@ struct JobBoxFormView: View {
                     
                     // School Picker (data from dropdownData)
                     Picker("School", selection: $selectedSchool) {
-                        ForEach(dropdownRecords.filter { $0.type.lowercased() == "school" }
-                                    .sorted { $0.value < $1.value }) { record in
+                        ForEach(dropdownRecords.sorted { $0.value < $1.value }) { record in
                             Text(record.value).tag(record.value)
+                        }
+                    }
+                    // If "Turned In" is picked, default the school to "Iconik"
+                    .onChange(of: selectedStatus) { newVal in
+                        if newVal.lowercased() == "turned in" {
+                            selectedSchool = "Iconik"
                         }
                     }
                     
@@ -52,6 +59,48 @@ struct JobBoxFormView: View {
                     Picker("Status", selection: $selectedStatus) {
                         ForEach(jobBoxStatuses, id: \.self) { status in
                             Text(status).tag(status)
+                        }
+                    }
+                    .onChange(of: selectedStatus) { newStatus in
+                        // If changing to Packed status and no shift is selected, pre-load shifts
+                        if newStatus.lowercased() == "packed" && selectedShift == nil {
+                            // Force a refresh of shifts
+                            ShiftManager.shared.loadShifts(forceRefresh: true)
+                        }
+                    }
+                    
+                    // Show shift selection if status is "Packed"
+                    if selectedStatus.lowercased() == "packed" {
+                        Button(action: {
+                            // Force a refresh of shifts before showing the selection view
+                            ShiftManager.shared.loadShifts(forceRefresh: true)
+                            showShiftSelection = true
+                        }) {
+                            HStack {
+                                Text("Select Shift")
+                                
+                                Spacer()
+                                
+                                if let shift = selectedShift {
+                                    VStack(alignment: .trailing) {
+                                        Text(shift.schoolName)
+                                            .font(.subheadline)
+                                            .foregroundColor(.primary)
+                                        
+                                        Text(ShiftManager.shared.formatShiftDate(shift))
+                                            .font(.caption)
+                                            .foregroundColor(.secondary)
+                                    }
+                                } else {
+                                    Text("None Selected")
+                                        .foregroundColor(.gray)
+                                        .font(.subheadline)
+                                }
+                                
+                                Image(systemName: "chevron.right")
+                                    .foregroundColor(.gray)
+                                    .font(.caption)
+                            }
                         }
                     }
                 }
@@ -64,9 +113,22 @@ struct JobBoxFormView: View {
                 },
                 trailing: Button("Submit") {
                     guard !isSubmitting else { return }
+                    
+                    // Validate to ensure a shift is selected if status is "Packed"
+                    if selectedStatus.lowercased() == "packed" && selectedShift == nil {
+                        alertMessage = "Please select a shift for this job"
+                        showAlert = true
+                        return
+                    }
+                    
                     isSubmitting = true
                     
-                    onSubmit(localPhotographer) { success in
+                    // For non-"Packed" statuses, we need to use either the selectedShift or the shiftUid from lastRecord
+                    let effectiveShiftId = selectedStatus.lowercased() == "packed"
+                        ? selectedShift?.id
+                        : (selectedShift?.id ?? lastRecord?.shiftUid)
+                    
+                    onSubmit(localPhotographer, effectiveShiftId) { success in
                         if success {
                             alertMessage = "Job box scan saved"
                             showAlert = true
@@ -108,17 +170,36 @@ struct JobBoxFormView: View {
                     self.dropdownRecords = cachedDropdowns
                 }
                 if let orgID = sessionManager.user?.organizationID {
-                    FirestoreManager.shared.listenForDropdownData(forOrgID: orgID) { records in
+                    FirestoreManager.shared.listenForSchoolsData(forOrgID: orgID) { records in
                         DispatchQueue.main.async {
                             self.dropdownRecords = records
                             // Ensure a default school is selected if none exists.
                             if selectedSchool.isEmpty {
-                                let schools = dropdownRecords.filter { $0.type.lowercased() == "school" }
-                                if let firstSchool = schools.sorted(by: { $0.value < $1.value }).first?.value {
+                                if let firstSchool = dropdownRecords.sorted(by: { $0.value < $1.value }).first?.value {
                                     selectedSchool = firstSchool
                                 }
                             }
                         }
+                    }
+                }
+                
+                // Check if we need to pre-load shifts data
+                if selectedStatus.lowercased() == "packed" {
+                    ShiftManager.shared.loadShifts()
+                }
+                
+                // If there's a lastRecord with a shiftUid and we're not in Packed status,
+                // try to load the shift information
+                if selectedStatus.lowercased() != "packed",
+                   let shiftUid = lastRecord?.shiftUid {
+                    // Make sure shifts are loaded
+                    if ShiftManager.shared.shifts.isEmpty {
+                        ShiftManager.shared.loadShifts()
+                    }
+                    
+                    // Find the shift that matches the UID
+                    if let matchingShift = ShiftManager.shared.shifts.first(where: { $0.id == shiftUid }) {
+                        selectedShift = matchingShift
                     }
                 }
             }
@@ -131,12 +212,30 @@ struct JobBoxFormView: View {
                     }))
                 }
             }
+            .sheet(isPresented: $showShiftSelection) {
+                ShiftSelectionView(
+                    schoolName: selectedSchool,
+                    onSelectShift: { shift in
+                        selectedShift = shift
+                        showShiftSelection = false
+                    },
+                    onCancel: {
+                        showShiftSelection = false
+                    }
+                )
+            }
         }
     }
     
     private func updateDefaults() {
         if let last = lastRecord {
+            // Set school from last record
             selectedSchool = last.school
+            
+            // If last status was "Turned In", default school to "Iconik"
+            if last.status.lowercased() == "turned in" {
+                selectedSchool = "Iconik"
+            }
             
             // Calculate next status in the cycle
             let currentStatus = last.status.lowercased()
@@ -150,8 +249,7 @@ struct JobBoxFormView: View {
         } else {
             // If no last record exists, and no school has been selected, set the default to the first available school.
             if selectedSchool.isEmpty {
-                let schools = dropdownRecords.filter { $0.type.lowercased() == "school" }
-                if let firstSchool = schools.sorted(by: { $0.value < $1.value }).first?.value {
+                if let firstSchool = dropdownRecords.sorted(by: { $0.value < $1.value }).first?.value {
                     selectedSchool = firstSchool
                 }
             }

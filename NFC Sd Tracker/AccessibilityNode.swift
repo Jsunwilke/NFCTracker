@@ -1,3 +1,11 @@
+//
+//  AccessibilityNode.swift
+//  NFC Sd Tracker
+//
+//  Created by administrator on 4/26/25.
+//
+
+
 import SwiftUI
 
 /// An extension to add accessibility descriptions to charts

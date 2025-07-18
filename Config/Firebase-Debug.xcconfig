@@ -1,0 +1,18 @@
+// Firebase-Debug.xcconfig
+// Firebase configuration for Debug builds
+// This file inherits from the base Firebase configuration and includes Pods configuration
+
+#include "Firebase.xcconfig"
+#include "../Pods/Target Support Files/Pods-NFC Sd Tracker/Pods-NFC Sd Tracker.debug.xcconfig"
+
+// Debug-specific Firebase settings
+// You can override any settings from the base config here if needed for debug builds
+
+// For example, you might want to use a different project ID for debug builds:
+// FIREBASE_PROJECT_ID = nfc-scanner-348a4-debug
+
+// Or enable additional logging in debug mode:
+// FIREBASE_DEBUG_LOGGING = true
+
+// The debug configuration inherits all settings from Firebase.xcconfig
+// This includes all the Firebase secrets and common settings

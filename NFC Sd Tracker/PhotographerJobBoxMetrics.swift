@@ -27,7 +27,7 @@ struct PhotographerJobBoxMetrics: View {
                         // Bar Chart for iOS 16+
                         Chart(photographerLeftJobTimes) { item in
                             BarMark(
-                                x: .value("Hours", item.averageHours),
+                                x: .value("Hours", max(0.1, item.averageHours)), // Ensure non-zero value for visibility
                                 y: .value("Photographer", item.photographerName)
                             )
                             .foregroundStyle(Color.orange.gradient)
@@ -52,7 +52,7 @@ struct PhotographerJobBoxMetrics: View {
                         .padding(.horizontal)
                     } else {
                         // Fallback for iOS 15 and below
-                        let maxHours = photographerLeftJobTimes.map { $0.averageHours }.max() ?? 1
+                        let maxHours = max(1.0, photographerLeftJobTimes.map { $0.averageHours }.max() ?? 1)
                         
                         VStack(spacing: 10) {
                             ForEach(photographerLeftJobTimes) { item in
@@ -64,7 +64,7 @@ struct PhotographerJobBoxMetrics: View {
                                     
                                     RoundedRectangle(cornerRadius: 4)
                                         .fill(Color.orange)
-                                        .frame(width: CGFloat(item.averageHours) / CGFloat(maxHours) * 200, height: 20)
+                                        .frame(width: max(20, CGFloat(item.averageHours) / CGFloat(maxHours) * 200), height: 20)
                                     
                                     Text(formatDuration(hours: item.averageHours))
                                         .font(.subheadline)
@@ -148,17 +148,5 @@ struct PhotographerLeftJobTime: Identifiable {
         } else {
             return String(format: "%.1f days", averageHours / 24)
         }
-    }
-}
-
-struct PhotographerJobBoxMetrics_Previews: PreviewProvider {
-    static var previews: some View {
-        PhotographerJobBoxMetrics(
-            photographerLeftJobTimes: [
-                PhotographerLeftJobTime(photographerName: "John", averageHours: 48.5, totalHours: 145.5, transitionCount: 3, currentBoxes: 2),
-                PhotographerLeftJobTime(photographerName: "Jane", averageHours: 24.3, totalHours: 72.9, transitionCount: 3, currentBoxes: 1),
-                PhotographerLeftJobTime(photographerName: "Mike", averageHours: 72.0, totalHours: 144.0, transitionCount: 2, currentBoxes: 0)
-            ]
-        )
     }
 }

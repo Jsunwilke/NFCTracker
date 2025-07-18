@@ -6,6 +6,11 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		77B4422086FC3311B4AFE5A9 /* Pods_NFC_Sd_Tracker.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = FCAE2926EC02C06DC66A8571 /* Pods_NFC_Sd_Tracker.framework */; };
+		C3B8E9BB2DC818F60014357D /* Metal.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C3B8E9BA2DC818F60014357D /* Metal.framework */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXContainerItemProxy section */
 		C3B6F7A02D73EB0500B39AF9 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
@@ -24,9 +29,16 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		5D62C5BA224168CE561F75C2 /* Pods-NFC Sd Tracker.release.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFC Sd Tracker.release.xcconfig"; path = "Target Support Files/Pods-NFC Sd Tracker/Pods-NFC Sd Tracker.release.xcconfig"; sourceTree = "<group>"; };
+		A415FBFC7F27D0DE901501B6 /* Pods-NFC Sd Tracker.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-NFC Sd Tracker.debug.xcconfig"; path = "Target Support Files/Pods-NFC Sd Tracker/Pods-NFC Sd Tracker.debug.xcconfig"; sourceTree = "<group>"; };
+		C39000A82E298141000A9A19 /* NFC Sd Tracker.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = "NFC Sd Tracker.entitlements"; sourceTree = "<group>"; };
 		C3B6F78D2D73EB0300B39AF9 /* NFC Sd Tracker.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "NFC Sd Tracker.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C3B6F79F2D73EB0500B39AF9 /* NFC Sd TrackerTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "NFC Sd TrackerTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C3B6F7A92D73EB0500B39AF9 /* NFC Sd TrackerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "NFC Sd TrackerUITests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
+		C3B8E9BA2DC818F60014357D /* Metal.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Metal.framework; path = System/Library/Frameworks/Metal.framework; sourceTree = SDKROOT; };
+		FB01A1B12E45F6789C123456 /* Config/Firebase-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Config/Firebase-Debug.xcconfig"; sourceTree = SOURCE_ROOT; };
+		FB01A1B22E45F6789C123457 /* Config/Firebase-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Config/Firebase-Release.xcconfig"; sourceTree = SOURCE_ROOT; };
+		FCAE2926EC02C06DC66A8571 /* Pods_NFC_Sd_Tracker.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_NFC_Sd_Tracker.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedRootGroup section */
@@ -52,6 +64,8 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				C3B8E9BB2DC818F60014357D /* Metal.framework in Frameworks */,
+				77B4422086FC3311B4AFE5A9 /* Pods_NFC_Sd_Tracker.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -72,6 +86,33 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		25887CDAF20F09AEB2E27813 /* Pods */ = {
+			isa = PBXGroup;
+			children = (
+				A415FBFC7F27D0DE901501B6 /* Pods-NFC Sd Tracker.debug.xcconfig */,
+				5D62C5BA224168CE561F75C2 /* Pods-NFC Sd Tracker.release.xcconfig */,
+			);
+			path = Pods;
+			sourceTree = "<group>";
+		};
+		B62E7A0CEF304E2ADFD01E81 /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				C3B8E9BA2DC818F60014357D /* Metal.framework */,
+				FCAE2926EC02C06DC66A8571 /* Pods_NFC_Sd_Tracker.framework */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		C390004D2E297D80000A9A19 /* Recovered References */ = {
+			isa = PBXGroup;
+			children = (
+				FB01A1B12E45F6789C123456 /* Config/Firebase-Debug.xcconfig */,
+				FB01A1B22E45F6789C123457 /* Config/Firebase-Release.xcconfig */,
+			);
+			name = "Recovered References";
+			sourceTree = "<group>";
+		};
 		C3B6F7842D73EB0300B39AF9 = {
 			isa = PBXGroup;
 			children = (
@@ -79,6 +120,10 @@
 				C3B6F7A22D73EB0500B39AF9 /* NFC Sd TrackerTests */,
 				C3B6F7AC2D73EB0500B39AF9 /* NFC Sd TrackerUITests */,
 				C3B6F78E2D73EB0300B39AF9 /* Products */,
+				25887CDAF20F09AEB2E27813 /* Pods */,
+				B62E7A0CEF304E2ADFD01E81 /* Frameworks */,
+				C390004D2E297D80000A9A19 /* Recovered References */,
+				C39000A82E298141000A9A19 /* NFC Sd Tracker.entitlements */,
 			);
 			sourceTree = "<group>";
 		};
@@ -99,9 +144,11 @@
 			isa = PBXNativeTarget;
 			buildConfigurationList = C3B6F7B32D73EB0500B39AF9 /* Build configuration list for PBXNativeTarget "NFC Sd Tracker" */;
 			buildPhases = (
+				561D4C9D4A8C24714B54FD4B /* [CP] Check Pods Manifest.lock */,
 				C3B6F7892D73EB0300B39AF9 /* Sources */,
 				C3B6F78A2D73EB0300B39AF9 /* Frameworks */,
 				C3B6F78B2D73EB0300B39AF9 /* Resources */,
+				CCFAE12D082FEF7BB0F864E8 /* [CP] Embed Pods Frameworks */,
 			);
 			buildRules = (
 			);
@@ -111,8 +158,6 @@
 				C3B6F78F2D73EB0300B39AF9 /* NFC Sd Tracker */,
 			);
 			name = "NFC Sd Tracker";
-			packageProductDependencies = (
-			);
 			productName = "NFC Sd Tracker";
 			productReference = C3B6F78D2D73EB0300B39AF9 /* NFC Sd Tracker.app */;
 			productType = "com.apple.product-type.application";
@@ -134,8 +179,6 @@
 				C3B6F7A22D73EB0500B39AF9 /* NFC Sd TrackerTests */,
 			);
 			name = "NFC Sd TrackerTests";
-			packageProductDependencies = (
-			);
 			productName = "NFC Sd TrackerTests";
 			productReference = C3B6F79F2D73EB0500B39AF9 /* NFC Sd TrackerTests.xctest */;
 			productType = "com.apple.product-type.bundle.unit-test";
@@ -157,8 +200,6 @@
 				C3B6F7AC2D73EB0500B39AF9 /* NFC Sd TrackerUITests */,
 			);
 			name = "NFC Sd TrackerUITests";
-			packageProductDependencies = (
-			);
 			productName = "NFC Sd TrackerUITests";
 			productReference = C3B6F7A92D73EB0500B39AF9 /* NFC Sd TrackerUITests.xctest */;
 			productType = "com.apple.product-type.bundle.ui-testing";
@@ -195,6 +236,9 @@
 			);
 			mainGroup = C3B6F7842D73EB0300B39AF9;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				C38974182D742BF000F75F9F /* XCRemoteSwiftPackageReference "SwiftCSV" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = C3B6F78E2D73EB0300B39AF9 /* Products */;
 			projectDirPath = "";
@@ -230,6 +274,48 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		561D4C9D4A8C24714B54FD4B /* [CP] Check Pods Manifest.lock */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${PODS_PODFILE_DIR_PATH}/Podfile.lock",
+				"${PODS_ROOT}/Manifest.lock",
+			);
+			name = "[CP] Check Pods Manifest.lock";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/Pods-NFC Sd Tracker-checkManifestLockResult.txt",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "diff \"${PODS_PODFILE_DIR_PATH}/Podfile.lock\" \"${PODS_ROOT}/Manifest.lock\" > /dev/null\nif [ $? != 0 ] ; then\n    # print error to STDERR\n    echo \"error: The sandbox is not in sync with the Podfile.lock. Run 'pod install' or update your CocoaPods installation.\" >&2\n    exit 1\nfi\n# This output is used by Xcode 'outputs' to avoid re-running this script phase.\necho \"SUCCESS\" > \"${SCRIPT_OUTPUT_FILE_0}\"\n";
+			showEnvVarsInLog = 0;
+		};
+		CCFAE12D082FEF7BB0F864E8 /* [CP] Embed Pods Frameworks */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-NFC Sd Tracker/Pods-NFC Sd Tracker-frameworks-${CONFIGURATION}-input-files.xcfilelist",
+			);
+			name = "[CP] Embed Pods Frameworks";
+			outputFileListPaths = (
+				"${PODS_ROOT}/Target Support Files/Pods-NFC Sd Tracker/Pods-NFC Sd Tracker-frameworks-${CONFIGURATION}-output-files.xcfilelist",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "\"${PODS_ROOT}/Target Support Files/Pods-NFC Sd Tracker/Pods-NFC Sd Tracker-frameworks.sh\"\n";
+			showEnvVarsInLog = 0;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		C3B6F7892D73EB0300B39AF9 /* Sources */ = {
@@ -306,7 +392,7 @@
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_NO_COMMON_BLOCKS = YES;
@@ -321,7 +407,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
 				MTL_FAST_MATH = YES;
@@ -369,7 +455,7 @@
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
-				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				GCC_C_LANGUAGE_STANDARD = gnu17;
 				GCC_NO_COMMON_BLOCKS = YES;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
@@ -378,7 +464,7 @@
 				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
 				GCC_WARN_UNUSED_FUNCTION = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LOCALIZATION_PREFERS_STRING_CATALOGS = YES;
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
@@ -390,26 +476,32 @@
 		};
 		C3B6F7B42D73EB0500B39AF9 /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = FB01A1B12E45F6789C123456 /* Config/Firebase-Debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "NFC Sd Tracker/NFC Sd Tracker.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_ASSET_PATHS = "\"NFC Sd Tracker/Preview Content\"";
 				DEVELOPMENT_TEAM = H42FQ49589;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "NFC-Sd-Tracker-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NFCReaderUsageDescription = "This app uses NFC to scan SD cards for tracking purposes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "Iconik.NFC-Sd-Tracker";
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "Iconik.NFC-Sd-Tracker2";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -419,26 +511,32 @@
 		};
 		C3B6F7B52D73EB0500B39AF9 /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = FB01A1B22E45F6789C123457 /* Config/Firebase-Release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_ENTITLEMENTS = "NFC Sd Tracker/NFC Sd Tracker.entitlements";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 18;
 				DEVELOPMENT_ASSET_PATHS = "\"NFC Sd Tracker/Preview Content\"";
 				DEVELOPMENT_TEAM = H42FQ49589;
 				ENABLE_PREVIEWS = YES;
 				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_FILE = "NFC-Sd-Tracker-Info.plist";
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.utilities";
+				INFOPLIST_KEY_NFCReaderUsageDescription = "This app uses NFC to scan SD cards for tracking purposes.";
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
-				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = UIInterfaceOrientationPortrait;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown";
+				IPHONEOS_DEPLOYMENT_TARGET = 18.0;
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				MARKETING_VERSION = 1.0;
-				PRODUCT_BUNDLE_IDENTIFIER = "Iconik.NFC-Sd-Tracker";
+				MARKETING_VERSION = 1.1;
+				PRODUCT_BUNDLE_IDENTIFIER = "Iconik.NFC-Sd-Tracker2";
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -454,7 +552,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = H42FQ49589;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Iconik.NFC-Sd-TrackerTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -473,7 +571,7 @@
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = H42FQ49589;
 				GENERATE_INFOPLIST_FILE = YES;
-				IPHONEOS_DEPLOYMENT_TARGET = 18.2;
+				IPHONEOS_DEPLOYMENT_TARGET = 16.6;
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = "Iconik.NFC-Sd-TrackerTests";
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -558,6 +656,17 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		C38974182D742BF000F75F9F /* XCRemoteSwiftPackageReference "SwiftCSV" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/naoty/SwiftCSV";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.10.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
 	};
 	rootObject = C3B6F7852D73EB0300B39AF9 /* Project object */;
 }

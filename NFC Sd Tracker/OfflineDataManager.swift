@@ -33,21 +33,12 @@ class OfflineDataManager: ObservableObject {
             object: nil
         )
         
-        // Initial check (you'll need to implement a proper network monitor)
-        checkConnectivity()
-    }
-    
-    private func checkConnectivity() {
-        // This would be replaced with actual network monitoring
-        // For now, we'll simulate it
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
-            // Simulated network check
-            self.isOnline = true
-            
-            // If we're back online and have pending operations, try to sync
-            if self.isOnline && self.syncPending {
-                self.syncPendingOperations()
-            }
+        // Initial check
+        isOnline = NetworkMonitor.shared.isConnected
+        
+        // If we're online and have pending operations, try to sync
+        if isOnline && syncPending {
+            syncPendingOperations()
         }
     }
     
@@ -78,9 +69,9 @@ class OfflineDataManager: ObservableObject {
         let timestamp: Date
     }
     
-    func addPendingOperation(type: PendingOperation.OperationType, 
-                             collectionPath: String, 
-                             data: [String: Any], 
+    func addPendingOperation(type: PendingOperation.OperationType,
+                             collectionPath: String,
+                             data: [String: Any],
                              id: String? = nil) {
         // Convert complex data types to strings for storage
         let storableData = data.mapValues { value -> String in
@@ -231,7 +222,7 @@ class OfflineDataManager: ObservableObject {
         return nil
     }
     
-    // MARK: - Specific App Caching Methods
+    // MARK: - SD Card Specific Methods
     
     // Cache records for offline use
     func cacheRecords(records: [FirestoreRecord]) {
@@ -250,23 +241,18 @@ class OfflineDataManager: ObservableObject {
         cachedRecords.append(record)
         cacheData(data: cachedRecords, forKey: "cachedRecords")
         
-        // Create pending operation
+        // Create pending operation with only the fields expected by Firestore rules
         var recordData: [String: Any] = [
-            "timestamp": record.timestamp,
-            "photographer": record.photographer,
             "cardNumber": record.cardNumber,
             "school": record.school,
             "status": record.status,
-            "organizationID": record.organizationID
+            "userId": record.userId,
+            "organizationID": record.organizationID,
+            "timestamp": record.timestamp
         ]
         
-        if let uploadedFromJasonsHouse = record.uploadedFromJasonsHouse {
-            recordData["uploadedFromJasonsHouse"] = uploadedFromJasonsHouse
-        }
-        
-        if let uploadedFromAndysHouse = record.uploadedFromAndysHouse {
-            recordData["uploadedFromAndysHouse"] = uploadedFromAndysHouse
-        }
+        // Note: photographer, uploadedFromJasonsHouse, uploadedFromAndysHouse fields 
+        // are stored in the record but not sent to Firestore due to strict field validation in security rules
         
         addPendingOperation(
             type: .add,
@@ -274,26 +260,9 @@ class OfflineDataManager: ObservableObject {
             data: recordData
         )
     }
-}
-
-// MARK: - Network Monitor
-
-// Basic Network Monitor (would need to be expanded with actual implementation)
-class NetworkMonitor {
-    static let shared = NetworkMonitor()
     
-    func startMonitoring() {
-        // Replace with actual network monitoring code
-        // For example, using NWPathMonitor
-        
-        // Simulate connectivity changes for demo purposes
-        Timer.scheduledTimer(withTimeInterval: 10, repeats: true) { _ in
-            let isOnline = Bool.random()
-            NotificationCenter.default.post(
-                name: NSNotification.Name("ConnectivityStatusChanged"),
-                object: nil,
-                userInfo: ["isOnline": isOnline]
-            )
-        }
-    }
+    // MARK: - Job Box Specific Methods
+    
+    // These methods are now implemented as extensions in JobBoxFirestoreModel.swift
+    // No job box specific methods should be included here to avoid duplicate declarations
 }

@@ -1,3 +1,11 @@
+//
+//  ValidationTextField.swift
+//  NFC Sd Tracker
+//
+//  Created by administrator on 4/26/25.
+//
+
+
 import SwiftUI
 
 /// A TextField with integrated validation and error message display

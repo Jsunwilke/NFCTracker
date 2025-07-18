@@ -1,32 +1,75 @@
-//
-//  NFC_Sd_TrackerApp.swift
-//  NFC Sd Tracker
-//
-//  Created by administrator on 3/1/25.
-//
-
 import SwiftUI
-import SwiftData
+import Firebase
 
 @main
-struct NFC_Sd_TrackerApp: App {
-    var sharedModelContainer: ModelContainer = {
-        let schema = Schema([
-            Item.self,
-        ])
-        let modelConfiguration = ModelConfiguration(schema: schema, isStoredInMemoryOnly: false)
-
-        do {
-            return try ModelContainer(for: schema, configurations: [modelConfiguration])
-        } catch {
-            fatalError("Could not create ModelContainer: \(error)")
-        }
-    }()
-
+struct NFCSdTrackerApp: App {
+    @StateObject var sessionManager = SessionManager()
+    
+    // Initialize accessibility coordinator
+    @StateObject var accessibilityCoordinator = AccessibilityCoordinator.shared
+    
+    init() {
+        // Configure Firebase
+        FirebaseApp.configure()
+        
+        // Configure Firestore for offline capability
+        let settings = FirestoreSettings()
+        settings.isPersistenceEnabled = true  // Enable offline persistence
+        settings.cacheSizeBytes = FirestoreCacheSizeUnlimited  // Allow unlimited cache size
+        Firestore.firestore().settings = settings
+        
+        // Start network monitoring
+        NetworkMonitor.shared.startMonitoring()
+        
+        // Register for accessibility notifications
+        registerForAccessibilityNotifications()
+        
+        // Configure appearance
+        configureAppearance()
+    }
+    
     var body: some Scene {
         WindowGroup {
-            ContentView()
+            SplashScreenView()
+                .environmentObject(sessionManager)
+                .environmentObject(accessibilityCoordinator)
+                .onAppear {
+                    // Ensure the offline data manager is initialized
+                    _ = OfflineDataManager.shared
+                }
         }
-        .modelContainer(sharedModelContainer)
+    }
+    
+    private func registerForAccessibilityNotifications() {
+        // Already handled by AccessibilityCoordinator
+    }
+    
+    private func configureAppearance() {
+        // Configure UITabBar appearance
+        let tabBarAppearance = UITabBarAppearance()
+        tabBarAppearance.configureWithOpaqueBackground()
+        tabBarAppearance.backgroundColor = UIColor(red: 43/255, green: 62/255, blue: 80/255, alpha: 1)
+        UITabBar.appearance().unselectedItemTintColor = .white
+        UITabBar.appearance().tintColor = .systemBlue
+        UITabBar.appearance().standardAppearance = tabBarAppearance
+        
+        // Configure iOS 15+ specific appearance
+        if #available(iOS 15.0, *) {
+            UITabBar.appearance().scrollEdgeAppearance = tabBarAppearance
+            
+            // Configure navigation bar for iOS 15+
+            let navBarAppearance = UINavigationBarAppearance()
+            navBarAppearance.configureWithOpaqueBackground()
+            navBarAppearance.backgroundColor = UIColor(red: 43/255, green: 62/255, blue: 80/255, alpha: 1)
+            navBarAppearance.titleTextAttributes = [.foregroundColor: UIColor.white]
+            navBarAppearance.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
+            
+            UINavigationBar.appearance().standardAppearance = navBarAppearance
+            UINavigationBar.appearance().scrollEdgeAppearance = navBarAppearance
+            UINavigationBar.appearance().compactAppearance = navBarAppearance
+        }
+        
+        // Configure UITextField appearance
+        UITextField.appearance().tintColor = .systemBlue
     }
 }

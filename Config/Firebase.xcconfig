@@ -1,0 +1,20 @@
+// Firebase.xcconfig
+// Base Firebase configuration file
+// This file imports the secrets and provides common Firebase settings
+
+// Import the secrets file (this should be git-ignored)
+#include "Firebase-Secrets.xcconfig"
+
+// Firebase Configuration Settings
+// These values will be available as preprocessor macros in your app
+
+// Common Firebase settings that don't change between environments
+FIREBASE_PLIST_VERSION = 1
+FIREBASE_IS_ADS_ENABLED = false
+FIREBASE_IS_ANALYTICS_ENABLED = false
+FIREBASE_IS_APPINVITE_ENABLED = true
+FIREBASE_IS_GCM_ENABLED = true
+FIREBASE_IS_SIGNIN_ENABLED = true
+
+// Make these values available as preprocessor definitions
+GCC_PREPROCESSOR_DEFINITIONS = $(inherited) FIREBASE_API_KEY=\"$(FIREBASE_API_KEY)\" FIREBASE_PROJECT_ID=\"$(FIREBASE_PROJECT_ID)\" FIREBASE_GCM_SENDER_ID=\"$(FIREBASE_GCM_SENDER_ID)\" FIREBASE_STORAGE_BUCKET=\"$(FIREBASE_STORAGE_BUCKET)\" FIREBASE_GOOGLE_APP_ID=\"$(FIREBASE_GOOGLE_APP_ID)\" FIREBASE_BUNDLE_ID=\"$(FIREBASE_BUNDLE_ID)\"

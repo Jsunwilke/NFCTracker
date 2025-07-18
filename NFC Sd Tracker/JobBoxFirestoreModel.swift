@@ -1,14 +1,7 @@
-//
-//  JobBoxRecord.swift
-//  NFC Sd Tracker
-//
-//  Created by administrator on 5/5/25.
-//
-
-
 import Foundation
 import FirebaseFirestore
 import FirebaseFirestoreSwift
+import FirebaseAuth
 
 struct JobBoxRecord: Codable, Identifiable {
     @DocumentID var id: String?
@@ -18,6 +11,58 @@ struct JobBoxRecord: Codable, Identifiable {
     let school: String
     let status: String
     let organizationID: String
+    let userId: String // User ID for Firebase Auth
+    let shiftUid: String? // New field to store the selected shift UID
+    
+    // Custom initializer for defensive coding
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        
+        // Handle DocumentID separately
+        _id = try container.decodeIfPresent(DocumentID<String>.self, forKey: CodingKeys.id) ?? DocumentID(wrappedValue: nil)
+        
+        // Timestamp handling with fallback
+        if let firebaseTimestamp = try? container.decode(Timestamp.self, forKey: .timestamp) {
+            timestamp = firebaseTimestamp.dateValue()
+        } else if let date = try? container.decode(Date.self, forKey: .timestamp) {
+            timestamp = date
+        } else if let stringDate = try? container.decode(String.self, forKey: .timestamp) {
+            let formatter = ISO8601DateFormatter()
+            timestamp = formatter.date(from: stringDate) ?? Date()
+        } else {
+            print("⚠️ JobBoxRecord: Using current date as fallback for timestamp")
+            timestamp = Date()
+        }
+        
+        // String fields with fallbacks
+        photographer = try container.decodeIfPresent(String.self, forKey: .photographer) ?? ""
+        boxNumber = try container.decodeIfPresent(String.self, forKey: .boxNumber) ?? ""
+        school = try container.decodeIfPresent(String.self, forKey: .school) ?? ""
+        status = try container.decodeIfPresent(String.self, forKey: .status) ?? ""
+        organizationID = try container.decodeIfPresent(String.self, forKey: .organizationID) ?? ""
+        userId = try container.decodeIfPresent(String.self, forKey: .userId) ?? ""
+        shiftUid = try container.decodeIfPresent(String.self, forKey: .shiftUid)
+        
+        print("✅ JobBoxRecord decoded successfully: box \(boxNumber), photographer \(photographer), userId \(userId)")
+    }
+    
+    // Standard initializer for creating new records
+    init(id: String? = nil, timestamp: Date, photographer: String, boxNumber: String, school: String, status: String, organizationID: String, userId: String, shiftUid: String? = nil) {
+        self._id = DocumentID(wrappedValue: id)
+        self.timestamp = timestamp
+        self.photographer = photographer
+        self.boxNumber = boxNumber
+        self.school = school
+        self.status = status
+        self.organizationID = organizationID
+        self.userId = userId
+        self.shiftUid = shiftUid
+    }
+    
+    // Coding keys
+    private enum CodingKeys: String, CodingKey {
+        case id, timestamp, photographer, boxNumber, school, status, organizationID, userId, shiftUid
+    }
 }
 
 extension FirestoreManager {
@@ -28,37 +73,90 @@ extension FirestoreManager {
                         school: String,
                         status: String,
                         organizationID: String,
+                        userId: String,
+                        shiftUid: String? = nil, // Added optional parameter
                         completion: @escaping (Result<String, Error>) -> Void) {
         
-        let record = JobBoxRecord(timestamp: timestamp,
+        let record = JobBoxRecord(id: nil,
+                                 timestamp: timestamp,
                                  photographer: photographer,
                                  boxNumber: boxNumber,
                                  school: school,
                                  status: status,
-                                 organizationID: organizationID)
+                                 organizationID: organizationID,
+                                 userId: userId,
+                                 shiftUid: shiftUid) // Include the shiftUid
         
         // Check if we're online
         if OfflineDataManager.shared.isOnline {
             isLoading = true
             loadingMessage = "Saving job box record..."
             
-            do {
-                _ = try db.collection("jobBoxes").addDocument(from: record) { error in
-                    self.isLoading = false
-                    if let error = error {
-                        completion(.failure(error))
-                    } else {
-                        // Cache the new record
-                        var cachedRecords = OfflineDataManager.shared.getCachedData(forKey: "cachedJobBoxRecords") as [JobBoxRecord]? ?? []
-                        cachedRecords.append(record)
-                        OfflineDataManager.shared.cacheData(data: cachedRecords, forKey: "cachedJobBoxRecords")
-                        
-                        completion(.success("Job box record saved successfully"))
+            // Debug: Print current auth info
+            if let currentUser = Auth.auth().currentUser {
+                print("🔍 DEBUG: Current Firebase Auth UID: \(currentUser.uid)")
+                print("🔍 DEBUG: Record userId being sent: \(record.userId)")
+                print("🔍 DEBUG: Are they equal? \(currentUser.uid == record.userId)")
+                
+                // Verify user document exists
+                debugVerifyUserDocument(userId: currentUser.uid) { exists in
+                    if !exists {
+                        print("❌ DEBUG: User document verification failed!")
                     }
                 }
-            } catch {
+            } else {
+                print("❌ DEBUG: No authenticated user found!")
+            }
+            
+            // Create a dictionary with only the fields expected by Firestore rules
+            var documentData: [String: Any] = [
+                "boxNumber": record.boxNumber,
+                "school": record.school,
+                "status": record.status,
+                "userId": record.userId,
+                "organizationID": record.organizationID,
+                "timestamp": Timestamp(date: record.timestamp)
+            ]
+            
+            // Add optional shiftUid if present
+            if let shiftUid = record.shiftUid {
+                documentData["shiftUid"] = shiftUid
+            }
+            
+            // Debug: Print the exact data being sent
+            print("🔍 DEBUG: Data being sent to Firebase:")
+            for (key, value) in documentData {
+                print("   \(key): \(value) (type: \(type(of: value)))")
+            }
+            
+            // Note: photographer field is stored in the record but not sent to Firestore
+            // due to strict field validation in security rules
+            
+            let firestore = Firestore.firestore()
+            firestore.collection("jobBoxes").addDocument(data: documentData) { error in
                 self.isLoading = false
-                completion(.failure(error))
+                if let error = error {
+                    let nsError = error as NSError
+                    print("❌ Error saving job box:")
+                    print("   Error code: \(nsError.code)")
+                    print("   Error domain: \(nsError.domain)")
+                    print("   Error description: \(error.localizedDescription)")
+                    print("   Full error: \(error)")
+                    
+                    // Check if it's a permission error
+                    if nsError.domain == "FIRFirestoreErrorDomain" && nsError.code == 7 {
+                        print("❌ This is a permission-denied error!")
+                    }
+                    
+                    completion(.failure(error))
+                } else {
+                    // Cache the new record
+                    var cachedRecords = OfflineDataManager.shared.getCachedData(forKey: "cachedJobBoxRecords") as [JobBoxRecord]? ?? []
+                    cachedRecords.append(record)
+                    OfflineDataManager.shared.cacheData(data: cachedRecords, forKey: "cachedJobBoxRecords")
+                    
+                    completion(.success("Job box record saved successfully"))
+                }
             }
         } else {
             // Handle offline saving
@@ -78,7 +176,8 @@ extension FirestoreManager {
         
         // Check if we're online
         if OfflineDataManager.shared.isOnline {
-            var query: Query = db.collection("jobBoxes").whereField("organizationID", isEqualTo: organizationID)
+            let firestore = Firestore.firestore()
+            var query: Query = firestore.collection("jobBoxes").whereField("organizationID", isEqualTo: organizationID)
             if field.lowercased() != "all" {
                 query = query.whereField(field, isEqualTo: value)
             }
@@ -101,13 +200,38 @@ extension FirestoreManager {
                     }
                 } else if let snapshot = snapshot {
                     do {
-                        let records = try snapshot.documents.compactMap { try $0.data(as: JobBoxRecord.self) }
+                        let records = try snapshot.documents.compactMap { document -> JobBoxRecord? in
+                            do {
+                                return try document.data(as: JobBoxRecord.self)
+                            } catch {
+                                print("❌ Failed to decode JobBoxRecord from document \(document.documentID)")
+                                print("❌ Error: \(error)")
+                                print("❌ Document data: \(document.data())")
+                                
+                                // Log specific field issues
+                                let data = document.data()
+                                print("❌ Field check:")
+                                print("   - timestamp: \(data["timestamp"] ?? "MISSING") (type: \(type(of: data["timestamp"])))")
+                                print("   - photographer: \(data["photographer"] ?? "MISSING") (type: \(type(of: data["photographer"])))")
+                                print("   - boxNumber: \(data["boxNumber"] ?? "MISSING") (type: \(type(of: data["boxNumber"])))")
+                                print("   - school: \(data["school"] ?? "MISSING") (type: \(type(of: data["school"])))")
+                                print("   - status: \(data["status"] ?? "MISSING") (type: \(type(of: data["status"])))")
+                                print("   - organizationID: \(data["organizationID"] ?? "MISSING") (type: \(type(of: data["organizationID"])))")
+                                print("   - userId: \(data["userId"] ?? "MISSING") (type: \(type(of: data["userId"])))")
+                                print("   - shiftUid: \(data["shiftUid"] ?? "MISSING") (type: \(type(of: data["shiftUid"])))")
+                                
+                                return nil
+                            }
+                        }
+                        
+                        print("✅ Successfully decoded \(records.count) JobBoxRecord(s) out of \(snapshot.documents.count) document(s)")
                         
                         // Cache records for offline use
                         OfflineDataManager.shared.cacheData(data: records, forKey: "cachedJobBoxRecords")
                         
                         completion(.success(records))
                     } catch {
+                        print("❌ Unexpected error in JobBoxRecord decoding: \(error)")
                         // Try to get cached data if there's an error
                         if let cachedRecords = OfflineDataManager.shared.getCachedData(forKey: "cachedJobBoxRecords") as [JobBoxRecord]? {
                             let filteredRecords = self.filterCachedJobBoxRecords(
@@ -178,7 +302,8 @@ extension FirestoreManager {
         
         // Check if we're online
         if OfflineDataManager.shared.isOnline {
-            db.collection("jobBoxes").document(recordID).delete { error in
+            let firestore = Firestore.firestore()
+            firestore.collection("jobBoxes").document(recordID).delete { error in
                 self.isLoading = false
                 
                 if let error = error {
@@ -220,7 +345,8 @@ extension FirestoreManager {
         loadingMessage = "Finding highest box number..."
         
         if OfflineDataManager.shared.isOnline {
-            db.collection("jobBoxes")
+            let firestore = Firestore.firestore()
+            firestore.collection("jobBoxes")
               .whereField("organizationID", isEqualTo: organizationID)
               .getDocuments { snapshot, error in
                   self.isLoading = false
@@ -259,6 +385,72 @@ extension FirestoreManager {
             }
         }
     }
+    
+    // MARK: - Debug Function to Verify User Document
+    func debugVerifyUserDocument(userId: String, completion: @escaping (Bool) -> Void) {
+        let firestore = Firestore.firestore()
+        firestore.collection("users").document(userId).getDocument { snapshot, error in
+            if let error = error {
+                print("❌ DEBUG: Error fetching user document: \(error)")
+                completion(false)
+            } else if let snapshot = snapshot, snapshot.exists {
+                if let data = snapshot.data() {
+                    print("✅ DEBUG: User document exists!")
+                    print("   organizationID: \(data["organizationID"] ?? "MISSING")")
+                    print("   firstName: \(data["firstName"] ?? "MISSING")")
+                    print("   email: \(data["email"] ?? "MISSING")")
+                    completion(true)
+                } else {
+                    print("❌ DEBUG: User document exists but has no data")
+                    completion(false)
+                }
+            } else {
+                print("❌ DEBUG: User document does NOT exist for userId: \(userId)")
+                completion(false)
+            }
+        }
+    }
+    
+    // MARK: - Debug Function to Print Raw Firebase Document Structure
+    func debugPrintJobBoxDocuments(organizationID: String) {
+        print("🔍 DEBUG: Fetching raw JobBox documents for organization: \(organizationID)")
+        
+        let firestore = Firestore.firestore()
+        firestore.collection("jobBoxes")
+            .whereField("organizationID", isEqualTo: organizationID)
+            .limit(to: 3) // Only fetch first 3 documents for debugging
+            .getDocuments { snapshot, error in
+                if let error = error {
+                    print("❌ DEBUG: Error fetching raw documents: \(error)")
+                    return
+                }
+                
+                guard let snapshot = snapshot else {
+                    print("❌ DEBUG: No snapshot returned")
+                    return
+                }
+                
+                print("🔍 DEBUG: Found \(snapshot.documents.count) documents")
+                
+                for (index, document) in snapshot.documents.enumerated() {
+                    print("\n📄 DEBUG Document \(index + 1) (ID: \(document.documentID)):")
+                    let data = document.data()
+                    
+                    for (key, value) in data {
+                        print("   \(key): \(value) (Type: \(type(of: value)))")
+                    }
+                    
+                    // Special handling for timestamp field
+                    if let timestamp = data["timestamp"] {
+                        if let firebaseTimestamp = timestamp as? Timestamp {
+                            print("   📅 Timestamp as Date: \(firebaseTimestamp.dateValue())")
+                        }
+                    }
+                }
+                
+                print("\n🔍 DEBUG: Raw document structure analysis complete")
+            }
+    }
 }
 
 // Extension to OfflineDataManager
@@ -270,15 +462,23 @@ extension OfflineDataManager {
         cachedRecords.append(record)
         cacheData(data: cachedRecords, forKey: "cachedJobBoxRecords")
         
-        // Create pending operation
-        let recordData: [String: Any] = [
-            "timestamp": record.timestamp,
-            "photographer": record.photographer,
+        // Create pending operation with only the fields expected by Firestore rules
+        var recordData: [String: Any] = [
             "boxNumber": record.boxNumber,
             "school": record.school,
             "status": record.status,
-            "organizationID": record.organizationID
+            "userId": record.userId,
+            "organizationID": record.organizationID,
+            "timestamp": record.timestamp
         ]
+        
+        // Add shiftUid if available
+        if let shiftUid = record.shiftUid {
+            recordData["shiftUid"] = shiftUid
+        }
+        
+        // Note: photographer field is stored in the record but not sent to Firestore
+        // due to strict field validation in security rules
         
         addPendingOperation(
             type: .add,

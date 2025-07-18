@@ -36,6 +36,12 @@ struct JobBoxBubbleView: View {
         return formatter.string(from: date)
     }
     
+    // Find the associated shift if there's a shiftUid
+    private var associatedShift: Shift? {
+        guard let shiftUid = record.shiftUid else { return nil }
+        return ShiftManager.shared.shifts.first(where: { $0.id == shiftUid })
+    }
+    
     var body: some View {
         ZStack(alignment: .topTrailing) {
             VStack(alignment: .leading, spacing: 8) {
@@ -51,6 +57,17 @@ struct JobBoxBubbleView: View {
                 Text("Status: \(record.status)")
                     .font(.subheadline)
                     .foregroundColor(.white)
+                
+                // Display associated shift info if available
+                if let shift = associatedShift {
+                    Text("Shift: \(ShiftManager.shared.formatShiftDate(shift))")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                } else if record.shiftUid != nil {
+                    Text("Shift: ID \(record.shiftUid!.prefix(8))...")
+                        .font(.subheadline)
+                        .foregroundColor(.white)
+                }
                 
                 Text("Timestamp: \(friendlyDateString(from: record.timestamp))")
                     .font(.caption)
@@ -71,6 +88,12 @@ struct JobBoxBubbleView: View {
                     .frame(height: 50)
                     .padding(.top, 10)
                     .padding(.trailing, 25)
+            }
+        }
+        .onAppear {
+            // Make sure shifts are loaded
+            if record.shiftUid != nil && ShiftManager.shared.shifts.isEmpty {
+                ShiftManager.shared.loadShifts()
             }
         }
     }

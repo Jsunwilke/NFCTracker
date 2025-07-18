@@ -1,3 +1,11 @@
+//
+//  LoadingOverlay.swift
+//  NFC Sd Tracker
+//
+//  Created by administrator on 4/26/25.
+//
+
+
 import SwiftUI
 
 struct LoadingOverlay: View {

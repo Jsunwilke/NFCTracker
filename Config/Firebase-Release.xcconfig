@@ -1,0 +1,18 @@
+// Firebase-Release.xcconfig
+// Firebase configuration for Release builds
+// This file inherits from the base Firebase configuration and includes Pods configuration
+
+#include "Firebase.xcconfig"
+#include "../Pods/Target Support Files/Pods-NFC Sd Tracker/Pods-NFC Sd Tracker.release.xcconfig"
+
+// Release-specific Firebase settings
+// You can override any settings from the base config here if needed for release builds
+
+// For production builds, you might want to use different analytics settings:
+// FIREBASE_IS_ANALYTICS_ENABLED = true
+
+// Or ensure debug logging is disabled:
+// FIREBASE_DEBUG_LOGGING = false
+
+// The release configuration inherits all settings from Firebase.xcconfig
+// This includes all the Firebase secrets and common settings
