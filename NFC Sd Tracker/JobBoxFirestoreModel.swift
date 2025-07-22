@@ -9,6 +9,7 @@ struct JobBoxRecord: Codable, Identifiable {
     let photographer: String
     let boxNumber: String
     let school: String
+    let schoolId: String? // New field to store school document ID
     let status: String
     let organizationID: String
     let userId: String // User ID for Firebase Auth
@@ -38,6 +39,7 @@ struct JobBoxRecord: Codable, Identifiable {
         photographer = try container.decodeIfPresent(String.self, forKey: .photographer) ?? ""
         boxNumber = try container.decodeIfPresent(String.self, forKey: .boxNumber) ?? ""
         school = try container.decodeIfPresent(String.self, forKey: .school) ?? ""
+        schoolId = try container.decodeIfPresent(String.self, forKey: .schoolId)
         status = try container.decodeIfPresent(String.self, forKey: .status) ?? ""
         organizationID = try container.decodeIfPresent(String.self, forKey: .organizationID) ?? ""
         userId = try container.decodeIfPresent(String.self, forKey: .userId) ?? ""
@@ -47,12 +49,13 @@ struct JobBoxRecord: Codable, Identifiable {
     }
     
     // Standard initializer for creating new records
-    init(id: String? = nil, timestamp: Date, photographer: String, boxNumber: String, school: String, status: String, organizationID: String, userId: String, shiftUid: String? = nil) {
+    init(id: String? = nil, timestamp: Date, photographer: String, boxNumber: String, school: String, schoolId: String? = nil, status: String, organizationID: String, userId: String, shiftUid: String? = nil) {
         self._id = DocumentID(wrappedValue: id)
         self.timestamp = timestamp
         self.photographer = photographer
         self.boxNumber = boxNumber
         self.school = school
+        self.schoolId = schoolId
         self.status = status
         self.organizationID = organizationID
         self.userId = userId
@@ -61,7 +64,7 @@ struct JobBoxRecord: Codable, Identifiable {
     
     // Coding keys
     private enum CodingKeys: String, CodingKey {
-        case id, timestamp, photographer, boxNumber, school, status, organizationID, userId, shiftUid
+        case id, timestamp, photographer, boxNumber, school, schoolId, status, organizationID, userId, shiftUid
     }
 }
 
@@ -71,6 +74,7 @@ extension FirestoreManager {
                         photographer: String,
                         boxNumber: String,
                         school: String,
+                        schoolId: String? = nil,
                         status: String,
                         organizationID: String,
                         userId: String,
@@ -82,6 +86,7 @@ extension FirestoreManager {
                                  photographer: photographer,
                                  boxNumber: boxNumber,
                                  school: school,
+                                 schoolId: schoolId,
                                  status: status,
                                  organizationID: organizationID,
                                  userId: userId,
@@ -119,7 +124,10 @@ extension FirestoreManager {
                 "timestamp": Timestamp(date: record.timestamp)
             ]
             
-            // Add optional shiftUid if present
+            // Add optional fields if present
+            if let schoolId = record.schoolId {
+                documentData["schoolId"] = schoolId
+            }
             if let shiftUid = record.shiftUid {
                 documentData["shiftUid"] = shiftUid
             }
@@ -472,7 +480,10 @@ extension OfflineDataManager {
             "timestamp": record.timestamp
         ]
         
-        // Add shiftUid if available
+        // Add optional fields if available
+        if let schoolId = record.schoolId {
+            recordData["schoolId"] = schoolId
+        }
         if let shiftUid = record.shiftUid {
             recordData["shiftUid"] = shiftUid
         }

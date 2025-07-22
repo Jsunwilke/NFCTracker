@@ -8,6 +8,7 @@ struct ScanView: View {
     @State private var showingForm = false
     @State private var showingJobBoxForm = false
     @State private var school = ""
+    @State private var schoolId: String? = nil
     @State private var status = "Job Box"
     @State private var isSaving = false
     @State private var showAlert = false
@@ -234,7 +235,7 @@ struct ScanView: View {
                         selectedSchool: $school,
                         selectedStatus: $status,
                         lastRecord: lastJobBoxRecord,
-                        onSubmit: { chosenPhotographer, shiftUid, completion in
+                        onSubmit: { chosenPhotographer, schoolId, shiftUid, completion in
                             isLoading = true
                             loadingMessage = "Saving job box data..."
                             
@@ -253,6 +254,7 @@ struct ScanView: View {
                             submitJobBoxData(
                                 boxNumber: boxNumber,
                                 photographer: chosenPhotographer,
+                                schoolId: schoolId,
                                 shiftUid: shiftUid,
                                 completion: completion
                             )
@@ -261,13 +263,6 @@ struct ScanView: View {
                             nfcReader.scannedCardNumber = nil
                         }
                     )
-                    .onAppear {
-                        // If we're showing a job box form and status is "Packed", preload shifts
-                        if status.lowercased() == "packed" {
-                            // Force refresh of shifts when needed
-                            ShiftManager.shared.loadShifts(forceRefresh: true)
-                        }
-                    }
                 }
             }
         }
@@ -550,6 +545,7 @@ struct ScanView: View {
     func submitJobBoxData(
         boxNumber: String,
         photographer: String,
+        schoolId: String? = nil,
         shiftUid: String? = nil, // Updated to include shiftUid
         completion: @escaping (Bool) -> Void
     ) {
@@ -578,6 +574,7 @@ struct ScanView: View {
             photographer: photographer,
             boxNumber: boxNumber,
             school: school,
+            schoolId: schoolId,
             status: status,
             organizationID: orgID,
             userId: sessionManager.user?.id ?? "",
@@ -691,6 +688,7 @@ struct ScanView: View {
                 
                 if let last = self.lastJobBoxRecord {
                     self.school = last.school
+                    self.schoolId = last.schoolId
                     
                     // Advance the status in the job box status cycle
                     if let index = jobBoxStatuses.firstIndex(where: { $0.lowercased() == last.status.lowercased() }) {
@@ -699,26 +697,18 @@ struct ScanView: View {
                     } else {
                         self.status = jobBoxStatuses.first ?? ""
                     }
-                    
-                    // If the new status is "Packed", we should force refresh the shift data
-                    if self.status.lowercased() == "packed" {
-                        ShiftManager.shared.loadShifts(forceRefresh: true)
-                    }
                 } else {
-                    // If no last record is found, attempt to use the locally cached school list
-                    if let data = UserDefaults.standard.data(forKey: "dropdownRecords"),
-                       let cachedDropdowns = try? JSONDecoder().decode([DropdownRecord].self, from: data) {
-                        if !cachedDropdowns.isEmpty {
-                            self.school = cachedDropdowns.sorted { $0.value < $1.value }.first?.value ?? ""
-                        }
-                    }
-                    
-                    // Default job box status is "Packed"
-                    self.status = "Packed"
-                    
-                    // For a new job box with "Packed" status, force refresh shifts
-                    ShiftManager.shared.loadShifts(forceRefresh: true)
+                    // For new job boxes, don't pre-select values - let them be chosen via session
+                    self.school = ""
+                    self.schoolId = nil
+                    self.status = "" // Will be set when session is selected
                 }
+                
+                // Always refresh sessions for job boxes
+                if let orgID = sessionManager.user?.organizationID {
+                    SessionsManager.shared.loadSessions(organizationID: orgID, forceRefresh: true)
+                }
+                
                 self.showingJobBoxForm = true
                 
             case .failure(let error):
@@ -729,10 +719,16 @@ struct ScanView: View {
                 self.toastMessage = "Could not fetch job box history. Starting fresh."
                 self.isSuccessToast = false
                 self.showToast = true
-                self.status = "Packed" // Default for new job box
                 
-                // For a new job box with "Packed" status, force refresh shifts
-                ShiftManager.shared.loadShifts(forceRefresh: true)
+                // For new job boxes, don't pre-select values
+                self.school = ""
+                self.schoolId = nil
+                self.status = ""
+                
+                // Always refresh sessions
+                if let orgID = sessionManager.user?.organizationID {
+                    SessionsManager.shared.loadSessions(organizationID: orgID, forceRefresh: true)
+                }
                 
                 self.showingJobBoxForm = true
             }

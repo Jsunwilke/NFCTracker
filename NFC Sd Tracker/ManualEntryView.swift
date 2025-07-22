@@ -1,5 +1,233 @@
 import SwiftUI
 
+// Sub-view for entry type selection
+struct EntryTypeSection: View {
+    @Binding var isJobBoxMode: Bool
+    @Binding var cardNumber: String
+    @Binding var selectedStatus: String
+    @Binding var lastRecord: FirestoreRecord?
+    @Binding var lastJobBoxRecord: JobBoxRecord?
+    
+    var body: some View {
+        Section {
+            Picker("Entry Type", selection: $isJobBoxMode) {
+                Text("SD Card").tag(false)
+                Text("Job Box").tag(true)
+            }
+            .pickerStyle(SegmentedPickerStyle())
+            .onChange(of: isJobBoxMode) { newValue in
+                // Reset form when switching modes
+                cardNumber = ""
+                selectedStatus = newValue ? "Packed" : ""
+                lastRecord = nil
+                lastJobBoxRecord = nil
+            }
+        }
+    }
+}
+
+// Sub-view for card/box number input
+struct NumberInputSection: View {
+    @Binding var cardNumber: String
+    @Binding var selectedSchool: String
+    @Binding var selectedStatus: String
+    @Binding var localPhotographer: String
+    let isJobBoxMode: Bool
+    let photographerNames: [String]
+    let onNumberComplete: (String) -> Void
+    
+    var body: some View {
+        Section(header: Text(isJobBoxMode ? "Job Box Information" : "Card Information")) {
+            TextField(isJobBoxMode ? "Enter 4-digit Box Number (3001+)" : "Enter 4-digit Card Number", text: $cardNumber)
+                .keyboardType(.numberPad)
+                .onChange(of: cardNumber) { newValue in
+                    if newValue.count == 4, Int(newValue) != nil {
+                        onNumberComplete(newValue)
+                    } else {
+                        selectedSchool = ""
+                        selectedStatus = isJobBoxMode ? "" : ""
+                    }
+                }
+            
+            // Include photographer for job boxes
+            if isJobBoxMode {
+                Picker("Photographer", selection: $localPhotographer) {
+                    ForEach(photographerNames, id: \.self) { name in
+                        Text(name).tag(name)
+                    }
+                }
+            }
+        }
+    }
+}
+
+// Sub-view for photographer selection
+struct PhotographerSection: View {
+    @Binding var localPhotographer: String
+    let photographerNames: [String]
+    
+    var body: some View {
+        Section(header: Text("Photographer")) {
+            Picker("Photographer", selection: $localPhotographer) {
+                ForEach(photographerNames, id: \.self) { name in
+                    Text(name).tag(name)
+                }
+            }
+        }
+    }
+}
+
+// Sub-view for additional information section
+struct AdditionalInfoSection: View {
+    @Binding var selectedSchool: String
+    @Binding var selectedStatus: String
+    @Binding var uploadedFromJasonsHouse: Bool
+    @Binding var uploadedFromAndysHouse: Bool
+    let selectedSession: Session?
+    
+    let isJobBoxMode: Bool
+    let dropdownRecords: [DropdownRecord]
+    let localStatuses: [String]
+    let jobBoxStatuses: [String]
+    let sessionManager: SessionManager
+    
+    var body: some View {
+        Section(header: Text("Additional Information")) {
+            // School
+            Picker("School", selection: $selectedSchool) {
+                ForEach(dropdownRecords.sorted { $0.value < $1.value }) { record in
+                    Text(record.value).tag(record.value)
+                }
+            }
+            .disabled(isJobBoxMode && selectedSession != nil) // Disable if session selected for job box
+            
+            // Status
+            StatusPicker(
+                selectedStatus: $selectedStatus,
+                selectedSchool: $selectedSchool,
+                isJobBoxMode: isJobBoxMode,
+                localStatuses: localStatuses,
+                jobBoxStatuses: jobBoxStatuses,
+                sessionManager: sessionManager
+            )
+            
+            // Conditional toggles for SD Card
+            if !isJobBoxMode && selectedStatus.lowercased() == "uploaded",
+               sessionManager.user?.organizationID.lowercased() == "iconikstudio" {
+                UploadToggles(
+                    uploadedFromJasonsHouse: $uploadedFromJasonsHouse,
+                    uploadedFromAndysHouse: $uploadedFromAndysHouse
+                )
+            }
+        }
+    }
+}
+
+// Sub-view for status picker
+struct StatusPicker: View {
+    @Binding var selectedStatus: String
+    @Binding var selectedSchool: String
+    let isJobBoxMode: Bool
+    let localStatuses: [String]
+    let jobBoxStatuses: [String]
+    let sessionManager: SessionManager
+    
+    var body: some View {
+        Picker("Status", selection: $selectedStatus) {
+            if isJobBoxMode {
+                ForEach(jobBoxStatuses, id: \.self) { status in
+                    Text(status).tag(status)
+                }
+            } else {
+                ForEach(localStatuses, id: \.self) { status in
+                    Text(status).tag(status)
+                }
+            }
+        }
+        .onChange(of: selectedStatus) { newVal in
+            if !isJobBoxMode && newVal.lowercased() == "cleared" {
+                selectedSchool = "Iconik"
+            } else if isJobBoxMode && newVal.lowercased() == "turned in" {
+                selectedSchool = "Iconik"
+            }
+            
+            // If changing to Packed status, preload the session data
+            if isJobBoxMode && newVal.lowercased() == "packed" {
+                if let orgID = sessionManager.user?.organizationID {
+                    SessionsManager.shared.loadSessions(organizationID: orgID, forceRefresh: true)
+                }
+            }
+        }
+    }
+}
+
+// Sub-view for upload toggles
+struct UploadToggles: View {
+    @Binding var uploadedFromJasonsHouse: Bool
+    @Binding var uploadedFromAndysHouse: Bool
+    
+    var body: some View {
+        Toggle("Uploaded from Jason's house", isOn: $uploadedFromJasonsHouse)
+            .onChange(of: uploadedFromJasonsHouse) { newValue in
+                if newValue { uploadedFromAndysHouse = false }
+            }
+        
+        Toggle("Uploaded from Andy's house", isOn: $uploadedFromAndysHouse)
+            .onChange(of: uploadedFromAndysHouse) { newValue in
+                if newValue { uploadedFromJasonsHouse = false }
+            }
+    }
+}
+
+// Sub-view for session selection button
+struct SessionSelectionButton: View {
+    @Binding var selectedSession: Session?
+    @Binding var showSessionSelection: Bool
+    let sessionManager: SessionManager
+    
+    var body: some View {
+        Button(action: {
+            // Force refresh sessions before showing the selection view
+            if let orgID = sessionManager.user?.organizationID {
+                SessionsManager.shared.loadSessions(organizationID: orgID, forceRefresh: true)
+            }
+            showSessionSelection = true
+        }) {
+            HStack {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Select Session")
+                        .font(.headline)
+                    
+                    if selectedSession == nil {
+                        Text("Choose from available sessions in the next 2 weeks")
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Spacer()
+                
+                if let session = selectedSession {
+                    VStack(alignment: .trailing) {
+                        Text(session.schoolName)
+                            .font(.subheadline)
+                            .foregroundColor(.primary)
+                        
+                        Text(SessionsManager.shared.formatSessionDate(session))
+                            .font(.caption)
+                            .foregroundColor(.secondary)
+                    }
+                }
+                
+                Image(systemName: "chevron.right")
+                    .foregroundColor(.gray)
+                    .font(.caption)
+            }
+        }
+        .foregroundColor(selectedSession == nil ? .blue : .primary)
+    }
+}
+
 struct ManualEntryView: View {
     @State private var cardNumber: String = ""
     @State private var selectedSchool: String = ""
@@ -23,8 +251,8 @@ struct ManualEntryView: View {
     @State private var lastJobBoxRecord: JobBoxRecord? = nil
     
     // For shift selection
-    @State private var selectedShift: Shift? = nil
-    @State private var showShiftSelection = false
+    @State private var selectedSession: Session? = nil
+    @State private var showSessionSelection = false
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var sessionManager: SessionManager
@@ -32,131 +260,64 @@ struct ManualEntryView: View {
     var body: some View {
         NavigationView {
             Form {
-                // Toggle between SD Card and Job Box mode
-                Section {
-                    Picker("Entry Type", selection: $isJobBoxMode) {
-                        Text("SD Card").tag(false)
-                        Text("Job Box").tag(true)
-                    }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .onChange(of: isJobBoxMode) { newValue in
-                        // Reset form when switching modes
-                        cardNumber = ""
-                        selectedStatus = newValue ? "Packed" : ""
-                        lastRecord = nil
-                        lastJobBoxRecord = nil
-                    }
-                }
+                // Entry type selection
+                EntryTypeSection(
+                    isJobBoxMode: $isJobBoxMode,
+                    cardNumber: $cardNumber,
+                    selectedStatus: $selectedStatus,
+                    lastRecord: $lastRecord,
+                    lastJobBoxRecord: $lastJobBoxRecord
+                )
                 
-                Section(header: Text(isJobBoxMode ? "Box Information" : "Card Information")) {
-                    TextField(isJobBoxMode ? "Enter 4-digit Box Number (3001+)" : "Enter 4-digit Card Number", text: $cardNumber)
-                        .keyboardType(.numberPad)
-                        .onChange(of: cardNumber) { newValue in
-                            if newValue.count == 4, Int(newValue) != nil {
-                                if isJobBoxMode {
-                                    fetchLastJobBoxRecord(for: newValue)
-                                } else {
-                                    fetchLastRecord(for: newValue)
-                                }
-                            } else {
-                                selectedSchool = ""
-                                selectedStatus = isJobBoxMode ? "Packed" : ""
-                            }
-                        }
-                }
-                
-                Section(header: Text("Photographer")) {
-                    Picker("Photographer", selection: $localPhotographer) {
-                        ForEach(photographerNames, id: \.self) { name in
-                            Text(name).tag(name)
+                // Number input section (includes photographer for job boxes)
+                NumberInputSection(
+                    cardNumber: $cardNumber,
+                    selectedSchool: $selectedSchool,
+                    selectedStatus: $selectedStatus,
+                    localPhotographer: $localPhotographer,
+                    isJobBoxMode: isJobBoxMode,
+                    photographerNames: photographerNames,
+                    onNumberComplete: { newValue in
+                        if isJobBoxMode {
+                            fetchLastJobBoxRecord(for: newValue)
+                        } else {
+                            fetchLastRecord(for: newValue)
                         }
                     }
+                )
+                
+                // Photographer section (only for SD cards)
+                if !isJobBoxMode {
+                    PhotographerSection(
+                        localPhotographer: $localPhotographer,
+                        photographerNames: photographerNames
+                    )
                 }
                 
                 if cardNumber.count == 4, Int(cardNumber) != nil {
-                    Section(header: Text("Additional Information")) {
-                        // School
-                        Picker("School", selection: $selectedSchool) {
-                            ForEach(dropdownRecords.sorted { $0.value < $1.value }) { record in
-                                Text(record.value).tag(record.value)
-                            }
-                        }
-                        
-                        // Status - show different options based on mode
-                        Picker("Status", selection: $selectedStatus) {
-                            if isJobBoxMode {
-                                ForEach(jobBoxStatuses, id: \.self) { status in
-                                    Text(status).tag(status)
-                                }
-                            } else {
-                                ForEach(localStatuses, id: \.self) { status in
-                                    Text(status).tag(status)
-                                }
-                            }
-                        }
-                        // Status-specific actions
-                        .onChange(of: selectedStatus) { newVal in
-                            if !isJobBoxMode && newVal.lowercased() == "cleared" {
-                                selectedSchool = "Iconik"
-                            } else if isJobBoxMode && newVal.lowercased() == "turned in" {
-                                selectedSchool = "Iconik"
-                            }
-                            
-                            // If changing to Packed status, preload the shift data
-                            if isJobBoxMode && newVal.lowercased() == "packed" {
-                                ShiftManager.shared.loadShifts(forceRefresh: true)
-                            }
-                        }
-                        
-                        // For SD Card: Show toggles if status is "uploaded"
-                        if !isJobBoxMode && selectedStatus.lowercased() == "uploaded",
-                           sessionManager.user?.organizationID.lowercased() == "iconikstudio" {
-                            Toggle("Uploaded from Jason's house", isOn: $uploadedFromJasonsHouse)
-                                .onChange(of: uploadedFromJasonsHouse) { newValue in
-                                    if newValue { uploadedFromAndysHouse = false }
-                                }
-                            
-                            Toggle("Uploaded from Andy's house", isOn: $uploadedFromAndysHouse)
-                                .onChange(of: uploadedFromAndysHouse) { newValue in
-                                    if newValue { uploadedFromJasonsHouse = false }
-                                }
-                        }
-                        
-                        // For Job Box: Show shift selection if status is "Packed"
-                        if isJobBoxMode && selectedStatus.lowercased() == "packed" {
-                            Button(action: {
-                                // Force refresh shifts before showing the selection view
-                                ShiftManager.shared.loadShifts(forceRefresh: true)
-                                showShiftSelection = true
-                            }) {
-                                HStack {
-                                    Text("Select Shift")
-                                    
-                                    Spacer()
-                                    
-                                    if let shift = selectedShift {
-                                        VStack(alignment: .trailing) {
-                                            Text(shift.schoolName)
-                                                .font(.subheadline)
-                                                .foregroundColor(.primary)
-                                            
-                                            Text(ShiftManager.shared.formatShiftDate(shift))
-                                                .font(.caption)
-                                                .foregroundColor(.secondary)
-                                        }
-                                    } else {
-                                        Text("None Selected")
-                                            .foregroundColor(.gray)
-                                            .font(.subheadline)
-                                    }
-                                    
-                                    Image(systemName: "chevron.right")
-                                        .foregroundColor(.gray)
-                                        .font(.caption)
-                                }
-                            }
+                    // Session selection for Job Box - prominently displayed
+                    if isJobBoxMode {
+                        Section(header: Text("Session Assignment")) {
+                            SessionSelectionButton(
+                                selectedSession: $selectedSession,
+                                showSessionSelection: $showSessionSelection,
+                                sessionManager: sessionManager
+                            )
                         }
                     }
+                    // Additional information section
+                    AdditionalInfoSection(
+                        selectedSchool: $selectedSchool,
+                        selectedStatus: $selectedStatus,
+                        uploadedFromJasonsHouse: $uploadedFromJasonsHouse,
+                        uploadedFromAndysHouse: $uploadedFromAndysHouse,
+                        selectedSession: selectedSession,
+                        isJobBoxMode: isJobBoxMode,
+                        dropdownRecords: dropdownRecords,
+                        localStatuses: localStatuses,
+                        jobBoxStatuses: jobBoxStatuses,
+                        sessionManager: sessionManager
+                    )
                 } else {
                     Section {
                         Text("Enter a valid 4-digit \(isJobBoxMode ? "box" : "card") number to load additional information.")
@@ -176,9 +337,9 @@ struct ManualEntryView: View {
                         return
                     }
                     
-                    // Validate for shift selection if Job Box in "Packed" status
-                    if isJobBoxMode && selectedStatus.lowercased() == "packed" && selectedShift == nil {
-                        alertMessage = "Please select a shift for this job"
+                    // Validate for session selection for new job boxes
+                    if isJobBoxMode && selectedSession == nil && lastJobBoxRecord == nil {
+                        alertMessage = "Please select a session for this job box"
                         showAlert = true
                         return
                     }
@@ -187,8 +348,10 @@ struct ManualEntryView: View {
                     
                     if isJobBoxMode {
                         // Submit job box
+                        let schoolId = selectedSession?.schoolId ?? dropdownRecords.first { $0.value == selectedSchool }?.id
                         submitJobBoxData(boxNumber: cardNumber,
-                                         shiftUid: selectedShift?.id)
+                                         schoolId: schoolId,
+                                         shiftUid: selectedSession?.id)
                     } else {
                         // Submit SD card
                         let jasonValue = uploadedFromJasonsHouse ? "Yes" : ""
@@ -214,15 +377,22 @@ struct ManualEntryView: View {
                           }
                       }))
             }
-            .sheet(isPresented: $showShiftSelection) {
-                ShiftSelectionView(
-                    schoolName: selectedSchool,
-                    onSelectShift: { shift in
-                        selectedShift = shift
-                        showShiftSelection = false
+            .sheet(isPresented: $showSessionSelection) {
+                AvailableSessionSelectionView(
+                    onSelectSession: { session in
+                        selectedSession = session
+                        // Auto-populate school and status when session is selected
+                        selectedSchool = session.schoolName
+                        // Find and set the school ID
+                        if let schoolRecord = dropdownRecords.first(where: { $0.value == session.schoolName }) {
+                            // Note: We don't have a selectedSchoolId binding here, but it will be set
+                            // when submitting through the school name lookup
+                        }
+                        selectedStatus = "Packed"
+                        showSessionSelection = false
                     },
                     onCancel: {
-                        showShiftSelection = false
+                        showSessionSelection = false
                     }
                 )
             }
@@ -257,13 +427,17 @@ struct ManualEntryView: View {
                 
                 // If we're starting in JobBox mode, preload shifts
                 if isJobBoxMode && selectedStatus.lowercased() == "packed" {
-                    ShiftManager.shared.loadShifts()
+                    if let orgID = sessionManager.user?.organizationID {
+                        SessionsManager.shared.loadSessions(organizationID: orgID)
+                    }
                 }
             }
             .onChange(of: isJobBoxMode) { newValue in
                 // If switching to job box mode, preload shifts
                 if newValue && selectedStatus.lowercased() == "packed" {
-                    ShiftManager.shared.loadShifts(forceRefresh: true)
+                    if let orgID = sessionManager.user?.organizationID {
+                        SessionsManager.shared.loadSessions(organizationID: orgID, forceRefresh: true)
+                    }
                 }
             }
         }
@@ -353,22 +527,25 @@ struct ManualEntryView: View {
                 selectedStatus = jobBoxStatuses.first ?? ""
             }
             
-            // If there's a shiftUid and we're not in Packed status, try to load the shift information
-            if selectedStatus.lowercased() != "packed", let shiftUid = last.shiftUid {
-                // Make sure shifts are loaded
-                if ShiftManager.shared.shifts.isEmpty {
-                    ShiftManager.shared.loadShifts()
+            // If there's a shiftUid and we're not in Packed status, try to load the session information
+            if selectedStatus.lowercased() != "packed", let sessionId = last.shiftUid {
+                // Make sure sessions are loaded
+                if SessionsManager.shared.sessions.isEmpty,
+                   let orgID = sessionManager.user?.organizationID {
+                    SessionsManager.shared.loadSessions(organizationID: orgID)
                 }
                 
-                // Find the shift that matches the UID
-                if let matchingShift = ShiftManager.shared.shifts.first(where: { $0.id == shiftUid }) {
-                    selectedShift = matchingShift
+                // Find the session that matches the ID
+                if let matchingSession = SessionsManager.shared.session(withId: sessionId) {
+                    selectedSession = matchingSession
                 }
             }
             
-            // If we're in packed status, force refresh the shifts
+            // If we're in packed status, force refresh the sessions
             if selectedStatus.lowercased() == "packed" {
-                ShiftManager.shared.loadShifts(forceRefresh: true)
+                if let orgID = sessionManager.user?.organizationID {
+                    SessionsManager.shared.loadSessions(organizationID: orgID, forceRefresh: true)
+                }
             }
         } else {
             // If no last record exists, ensure a sensible default
@@ -379,8 +556,10 @@ struct ManualEntryView: View {
             }
             selectedStatus = "Packed" // Default for new job box
             
-            // For a new job box, force refresh shifts
-            ShiftManager.shared.loadShifts(forceRefresh: true)
+            // For a new job box, force refresh sessions
+            if let orgID = sessionManager.user?.organizationID {
+                SessionsManager.shared.loadSessions(organizationID: orgID, forceRefresh: true)
+            }
         }
     }
     
@@ -430,6 +609,7 @@ struct ManualEntryView: View {
     
     func submitJobBoxData(
         boxNumber: String,
+        schoolId: String? = nil,
         shiftUid: String? = nil,
         completion: @escaping (Bool) -> Void = { _ in }
     ) {
@@ -451,6 +631,7 @@ struct ManualEntryView: View {
             photographer: localPhotographer,
             boxNumber: boxNumber,
             school: selectedSchool,
+            schoolId: schoolId,
             status: selectedStatus,
             organizationID: orgID,
             userId: sessionManager.user?.id ?? "",

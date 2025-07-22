@@ -6,19 +6,20 @@ struct JobBoxFormView: View {
     @Binding var selectedStatus: String
     let lastRecord: JobBoxRecord?
     
-    var onSubmit: (String, String?, @escaping (Bool) -> Void) -> Void // Updated to include shiftUid
+    var onSubmit: (String, String?, String?, @escaping (Bool) -> Void) -> Void // photographer, schoolId, sessionId
     var onCancel: () -> Void
     
     @Environment(\.dismiss) private var dismiss
     @EnvironmentObject var sessionManager: SessionManager
     
     @State private var localPhotographer: String = ""
-    @State private var selectedShift: Shift? = nil
+    @State private var selectedSession: Session? = nil
+    @State private var selectedSchoolId: String? = nil
     
     @State private var isSubmitting = false
     @State private var showAlert = false
     @State private var alertMessage = ""
-    @State private var showShiftSelection = false
+    @State private var showSessionSelection = false
     
     // For photographers & schools
     @State private var photographerNames: [String] = []
@@ -32,28 +33,70 @@ struct JobBoxFormView: View {
             Form {
                 Section(header: Text("Job Box Information")) {
                     Text("Box Number: \(boxNumber)")
-                }
-                
-                Section(header: Text("Additional Information")) {
-                    // Photographer Picker (data from users)
+                    
+                    // Photographer Picker (data from users) - Now at the top
                     Picker("Photographer", selection: $localPhotographer) {
                         ForEach(photographerNames, id: \.self) { name in
                             Text(name).tag(name)
                         }
                     }
-                    
-                    // School Picker (data from dropdownData)
+                }
+                
+                // Session selection prominently displayed
+                Section(header: Text("Session Assignment")) {
+                    Button(action: {
+                        // Force a refresh of sessions before showing the selection view
+                        if let orgID = sessionManager.user?.organizationID {
+                            SessionsManager.shared.loadSessions(organizationID: orgID, forceRefresh: true)
+                        }
+                        showSessionSelection = true
+                    }) {
+                        HStack {
+                            VStack(alignment: .leading, spacing: 4) {
+                                Text("Select Session")
+                                    .font(.headline)
+                                
+                                if selectedSession == nil {
+                                    Text("Choose from available sessions in the next 2 weeks")
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            
+                            Spacer()
+                            
+                            if let session = selectedSession {
+                                VStack(alignment: .trailing) {
+                                    Text(session.schoolName)
+                                        .font(.subheadline)
+                                        .foregroundColor(.primary)
+                                    
+                                    Text(SessionsManager.shared.formatSessionDate(session))
+                                        .font(.caption)
+                                        .foregroundColor(.secondary)
+                                }
+                            }
+                            
+                            Image(systemName: "chevron.right")
+                                .foregroundColor(.gray)
+                                .font(.caption)
+                        }
+                    }
+                    .foregroundColor(selectedSession == nil ? .blue : .primary)
+                }
+                
+                Section(header: Text("Additional Information")) {
+                    // School Picker (data from dropdownData) - Auto-filled from session
                     Picker("School", selection: $selectedSchool) {
                         ForEach(dropdownRecords.sorted { $0.value < $1.value }) { record in
                             Text(record.value).tag(record.value)
                         }
                     }
-                    // If "Turned In" is picked, default the school to "Iconik"
-                    .onChange(of: selectedStatus) { newVal in
-                        if newVal.lowercased() == "turned in" {
-                            selectedSchool = "Iconik"
-                        }
+                    .onChange(of: selectedSchool) { newSchool in
+                        // Find and set the school ID when school name changes
+                        selectedSchoolId = dropdownRecords.first { $0.value == newSchool }?.id
                     }
+                    .disabled(selectedSession != nil) // Disable if session selected
                     
                     // Status Picker - Job Box specific
                     Picker("Status", selection: $selectedStatus) {
@@ -61,46 +104,10 @@ struct JobBoxFormView: View {
                             Text(status).tag(status)
                         }
                     }
-                    .onChange(of: selectedStatus) { newStatus in
-                        // If changing to Packed status and no shift is selected, pre-load shifts
-                        if newStatus.lowercased() == "packed" && selectedShift == nil {
-                            // Force a refresh of shifts
-                            ShiftManager.shared.loadShifts(forceRefresh: true)
-                        }
-                    }
-                    
-                    // Show shift selection if status is "Packed"
-                    if selectedStatus.lowercased() == "packed" {
-                        Button(action: {
-                            // Force a refresh of shifts before showing the selection view
-                            ShiftManager.shared.loadShifts(forceRefresh: true)
-                            showShiftSelection = true
-                        }) {
-                            HStack {
-                                Text("Select Shift")
-                                
-                                Spacer()
-                                
-                                if let shift = selectedShift {
-                                    VStack(alignment: .trailing) {
-                                        Text(shift.schoolName)
-                                            .font(.subheadline)
-                                            .foregroundColor(.primary)
-                                        
-                                        Text(ShiftManager.shared.formatShiftDate(shift))
-                                            .font(.caption)
-                                            .foregroundColor(.secondary)
-                                    }
-                                } else {
-                                    Text("None Selected")
-                                        .foregroundColor(.gray)
-                                        .font(.subheadline)
-                                }
-                                
-                                Image(systemName: "chevron.right")
-                                    .foregroundColor(.gray)
-                                    .font(.caption)
-                            }
+                    .onChange(of: selectedStatus) { newVal in
+                        if newVal.lowercased() == "turned in" {
+                            selectedSchool = "Iconik"
+                            selectedSchoolId = dropdownRecords.first { $0.value == "Iconik" }?.id
                         }
                     }
                 }
@@ -114,21 +121,19 @@ struct JobBoxFormView: View {
                 trailing: Button("Submit") {
                     guard !isSubmitting else { return }
                     
-                    // Validate to ensure a shift is selected if status is "Packed"
-                    if selectedStatus.lowercased() == "packed" && selectedShift == nil {
-                        alertMessage = "Please select a shift for this job"
+                    // Validate to ensure a session is selected for new job boxes
+                    if selectedSession == nil && lastRecord == nil {
+                        alertMessage = "Please select a session for this job box"
                         showAlert = true
                         return
                     }
                     
                     isSubmitting = true
                     
-                    // For non-"Packed" statuses, we need to use either the selectedShift or the shiftUid from lastRecord
-                    let effectiveShiftId = selectedStatus.lowercased() == "packed"
-                        ? selectedShift?.id
-                        : (selectedShift?.id ?? lastRecord?.shiftUid)
+                    // Use the selected session ID or maintain the existing one from lastRecord
+                    let effectiveSessionId = selectedSession?.id ?? lastRecord?.shiftUid
                     
-                    onSubmit(localPhotographer, effectiveShiftId) { success in
+                    onSubmit(localPhotographer, selectedSchoolId, effectiveSessionId) { success in
                         if success {
                             alertMessage = "Job box scan saved"
                             showAlert = true
@@ -183,23 +188,26 @@ struct JobBoxFormView: View {
                     }
                 }
                 
-                // Check if we need to pre-load shifts data
+                // Check if we need to pre-load sessions data
                 if selectedStatus.lowercased() == "packed" {
-                    ShiftManager.shared.loadShifts()
+                    if let orgID = sessionManager.user?.organizationID {
+                        SessionsManager.shared.loadSessions(organizationID: orgID)
+                    }
                 }
                 
                 // If there's a lastRecord with a shiftUid and we're not in Packed status,
-                // try to load the shift information
+                // try to load the session information
                 if selectedStatus.lowercased() != "packed",
-                   let shiftUid = lastRecord?.shiftUid {
-                    // Make sure shifts are loaded
-                    if ShiftManager.shared.shifts.isEmpty {
-                        ShiftManager.shared.loadShifts()
+                   let sessionId = lastRecord?.shiftUid {
+                    // Make sure sessions are loaded
+                    if SessionsManager.shared.sessions.isEmpty,
+                       let orgID = sessionManager.user?.organizationID {
+                        SessionsManager.shared.loadSessions(organizationID: orgID)
                     }
                     
-                    // Find the shift that matches the UID
-                    if let matchingShift = ShiftManager.shared.shifts.first(where: { $0.id == shiftUid }) {
-                        selectedShift = matchingShift
+                    // Find the session that matches the ID
+                    if let matchingSession = SessionsManager.shared.session(withId: sessionId) {
+                        selectedSession = matchingSession
                     }
                 }
             }
@@ -212,15 +220,18 @@ struct JobBoxFormView: View {
                     }))
                 }
             }
-            .sheet(isPresented: $showShiftSelection) {
-                ShiftSelectionView(
-                    schoolName: selectedSchool,
-                    onSelectShift: { shift in
-                        selectedShift = shift
-                        showShiftSelection = false
+            .sheet(isPresented: $showSessionSelection) {
+                AvailableSessionSelectionView(
+                    onSelectSession: { session in
+                        selectedSession = session
+                        // Auto-populate school and status when session is selected
+                        selectedSchool = session.schoolName
+                        selectedSchoolId = session.schoolId
+                        selectedStatus = "Packed"
+                        showSessionSelection = false
                     },
                     onCancel: {
-                        showShiftSelection = false
+                        showSessionSelection = false
                     }
                 )
             }
@@ -231,10 +242,12 @@ struct JobBoxFormView: View {
         if let last = lastRecord {
             // Set school from last record
             selectedSchool = last.school
+            selectedSchoolId = last.schoolId
             
             // If last status was "Turned In", default school to "Iconik"
             if last.status.lowercased() == "turned in" {
                 selectedSchool = "Iconik"
+                selectedSchoolId = dropdownRecords.first { $0.value == "Iconik" }?.id
             }
             
             // Calculate next status in the cycle
@@ -247,16 +260,12 @@ struct JobBoxFormView: View {
                 selectedStatus = jobBoxStatuses.first ?? ""
             }
         } else {
-            // If no last record exists, and no school has been selected, set the default to the first available school.
-            if selectedSchool.isEmpty {
-                if let firstSchool = dropdownRecords.sorted(by: { $0.value < $1.value }).first?.value {
-                    selectedSchool = firstSchool
-                }
-            }
-            // Set default status to "Packed" for new job boxes
-            if selectedStatus.isEmpty {
-                selectedStatus = "Packed"
-            }
+            // For new job boxes, don't pre-select a school - let it be selected via session
+            selectedSchool = ""
+            selectedSchoolId = nil
+            
+            // Default status will be set to "Packed" when session is selected
+            selectedStatus = ""
         }
     }
 }
@@ -269,7 +278,7 @@ struct JobBoxFormView_Previews: PreviewProvider {
             selectedSchool: .constant("Sample School"),
             selectedStatus: .constant("Packed"),
             lastRecord: nil,
-            onSubmit: { _, _, completion in
+            onSubmit: { _, _, _, completion in
                 completion(true)
             },
             onCancel: {}

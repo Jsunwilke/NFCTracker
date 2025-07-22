@@ -36,10 +36,10 @@ struct JobBoxBubbleView: View {
         return formatter.string(from: date)
     }
     
-    // Find the associated shift if there's a shiftUid
-    private var associatedShift: Shift? {
-        guard let shiftUid = record.shiftUid else { return nil }
-        return ShiftManager.shared.shifts.first(where: { $0.id == shiftUid })
+    // Find the associated session if there's a shiftUid (now sessionId)
+    private var associatedSession: Session? {
+        guard let sessionId = record.shiftUid else { return nil }
+        return SessionsManager.shared.session(withId: sessionId)
     }
     
     var body: some View {
@@ -58,13 +58,16 @@ struct JobBoxBubbleView: View {
                     .font(.subheadline)
                     .foregroundColor(.white)
                 
-                // Display associated shift info if available
-                if let shift = associatedShift {
-                    Text("Shift: \(ShiftManager.shared.formatShiftDate(shift))")
+                // Display associated session info if available
+                if let session = associatedSession {
+                    Text("Session: \(SessionsManager.shared.formatSessionDate(session))")
                         .font(.subheadline)
                         .foregroundColor(.white)
+                    Text("Time: \(session.startTime) - \(session.endTime)")
+                        .font(.caption)
+                        .foregroundColor(.white)
                 } else if record.shiftUid != nil {
-                    Text("Shift: ID \(record.shiftUid!.prefix(8))...")
+                    Text("Session: ID \(record.shiftUid!.prefix(8))...")
                         .font(.subheadline)
                         .foregroundColor(.white)
                 }
@@ -91,9 +94,11 @@ struct JobBoxBubbleView: View {
             }
         }
         .onAppear {
-            // Make sure shifts are loaded
-            if record.shiftUid != nil && ShiftManager.shared.shifts.isEmpty {
-                ShiftManager.shared.loadShifts()
+            // Make sure sessions are loaded if we have a session ID
+            if record.shiftUid != nil && SessionsManager.shared.sessions.isEmpty {
+                // We need the organization ID to load sessions
+                // This should be provided from a parent view or environment
+                // For now, we'll rely on sessions being already loaded
             }
         }
     }
