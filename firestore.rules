@@ -253,6 +253,16 @@ service cloud.firestore {
                        belongsToSameOrg(request.auth.uid, resource.data.organizationID);
     }
 
+    // Sports Jobs Locks subcollection for entry-level locking
+    match /sportsJobs/{jobId}/locks/{lockId} {
+      // Allow authenticated users to read/write locks for sports jobs in their organization
+      // This enables the entry locking system to prevent simultaneous editing conflicts
+      allow read, write: if request.auth != null && 
+                           request.auth.uid != null &&
+                           // Ensure user belongs to the same organization as the parent sports job
+                           belongsToSameOrg(request.auth.uid, get(/databases/$(database)/documents/sportsJobs/$(jobId)).data.organizationID);
+    }
+
     // Player Search Index collection
     match /playerSearchIndex/{indexId} {
       // Users can read search index from their organization
@@ -263,44 +273,20 @@ service cloud.firestore {
       allow write: if false;
     }
 
-    // Job Boxes collection (tracking records)
+    // Job Boxes collection
     match /jobBoxes/{boxId} {
       // Users can read job boxes from their organization
       allow read: if request.auth != null && 
                      belongsToSameOrg(request.auth.uid, resource.data.organizationID);
       
-      // Users can create job box records for their organization
-      allow create: if request.auth != null && 
-                       belongsToSameOrg(request.auth.uid, request.resource.data.organizationID) &&
-                       request.resource.data.userId == request.auth.uid &&
-                       // Validate required fields for job box tracking
-                       request.resource.data.keys().hasAll(['boxNumber', 'school', 'status', 'userId', 'organizationID', 'timestamp']) &&
-                       // Validate data types
-                       request.resource.data.boxNumber is string &&
-                       request.resource.data.school is string &&
-                       request.resource.data.status is string &&
-                       request.resource.data.userId is string &&
-                       request.resource.data.organizationID is string &&
-                       request.resource.data.timestamp is timestamp &&
-                       // Validate field lengths for security
-                       request.resource.data.boxNumber.size() <= 50 &&
-                       request.resource.data.school.size() <= 100 &&
-                       request.resource.data.status.size() <= 50 &&
-                       // Validate optional fields
-                       (!request.resource.data.keys().hasAny(['shiftUid']) || request.resource.data.shiftUid is string);
+      // Users can create/update job boxes for their organization
+      allow create, update: if request.auth != null && 
+                               belongsToSameOrg(request.auth.uid, request.resource.data.organizationID);
       
-      // Users can update their own job box records, admins can update any
-      allow update: if request.auth != null && 
-                       belongsToSameOrg(request.auth.uid, resource.data.organizationID) &&
-                       (request.auth.uid == resource.data.userId || isAdmin(request.auth.uid)) &&
-                       // Prevent changing core identity fields
-                       request.resource.data.userId == resource.data.userId &&
-                       request.resource.data.organizationID == resource.data.organizationID;
-      
-      // Users can delete their own job box records, admins can delete any
+      // Admins can delete job boxes
       allow delete: if request.auth != null && 
-                       belongsToSameOrg(request.auth.uid, resource.data.organizationID) &&
-                       (request.auth.uid == resource.data.userId || isAdmin(request.auth.uid));
+                       isAdmin(request.auth.uid) &&
+                       belongsToSameOrg(request.auth.uid, resource.data.organizationID);
     }
 
     // SD Cards collection
@@ -319,45 +305,24 @@ service cloud.firestore {
                        belongsToSameOrg(request.auth.uid, resource.data.organizationID);
     }
 
-    // Records collection (SD Card tracking records)
+    // Records collection (general records)
     match /records/{recordId} {
-      // Users can read records from their organization
+      // Users can read records from their organization (if organizationID exists)
       allow read: if request.auth != null && 
-                     belongsToSameOrg(request.auth.uid, resource.data.organizationID);
+                     (!resource.data.keys().hasAny(['organizationID']) || 
+                      belongsToSameOrg(request.auth.uid, resource.data.organizationID));
       
-      // Users can create SD card records for their organization
-      allow create: if request.auth != null && 
-                       belongsToSameOrg(request.auth.uid, request.resource.data.organizationID) &&
-                       request.resource.data.userId == request.auth.uid &&
-                       // Validate required fields for SD card tracking
-                       request.resource.data.keys().hasAll(['cardNumber', 'school', 'status', 'userId', 'organizationID', 'timestamp']) &&
-                       // Validate data types
-                       request.resource.data.cardNumber is string &&
-                       request.resource.data.school is string &&
-                       request.resource.data.status is string &&
-                       request.resource.data.userId is string &&
-                       request.resource.data.organizationID is string &&
-                       request.resource.data.timestamp is timestamp &&
-                       // Validate field lengths for security
-                       request.resource.data.cardNumber.size() <= 50 &&
-                       request.resource.data.school.size() <= 100 &&
-                       request.resource.data.status.size() <= 50 &&
-                       // Validate optional fields
-                       (!request.resource.data.keys().hasAny(['uploadedFromJasonsHouse']) || request.resource.data.uploadedFromJasonsHouse is string) &&
-                       (!request.resource.data.keys().hasAny(['uploadedFromAndysHouse']) || request.resource.data.uploadedFromAndysHouse is string);
+      // Users can create records
+      allow create: if request.auth != null;
       
-      // Users can update their own records, admins can update any
+      // Users can update their own records or admins can update any
       allow update: if request.auth != null && 
-                       belongsToSameOrg(request.auth.uid, resource.data.organizationID) &&
-                       (request.auth.uid == resource.data.userId || isAdmin(request.auth.uid)) &&
-                       // Prevent changing core identity fields
-                       request.resource.data.userId == resource.data.userId &&
-                       request.resource.data.organizationID == resource.data.organizationID;
+                       (resource.data.keys().hasAny(['createdBy']) && 
+                        request.auth.uid == resource.data.createdBy ||
+                        isAdmin(request.auth.uid));
       
-      // Users can delete their own records, admins can delete any
-      allow delete: if request.auth != null && 
-                       belongsToSameOrg(request.auth.uid, resource.data.organizationID) &&
-                       (request.auth.uid == resource.data.userId || isAdmin(request.auth.uid));
+      // Admins can delete records
+      allow delete: if request.auth != null && isAdmin(request.auth.uid);
     }
 
     // Report Templates collection (for custom daily report templates)

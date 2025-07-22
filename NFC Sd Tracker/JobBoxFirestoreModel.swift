@@ -43,7 +43,7 @@ struct JobBoxRecord: Codable, Identifiable {
         userId = try container.decodeIfPresent(String.self, forKey: .userId) ?? ""
         shiftUid = try container.decodeIfPresent(String.self, forKey: .shiftUid)
         
-        print("✅ JobBoxRecord decoded successfully: box \(boxNumber), photographer \(photographer), userId \(userId)")
+        print("✅ JobBoxRecord decoded successfully: ID \(id ?? "nil"), box \(boxNumber), photographer \(photographer), userId \(userId)")
     }
     
     // Standard initializer for creating new records
@@ -108,11 +108,12 @@ extension FirestoreManager {
                 print("❌ DEBUG: No authenticated user found!")
             }
             
-            // Create a dictionary with only the fields expected by Firestore rules
+            // Create a dictionary with all fields for Firestore
             var documentData: [String: Any] = [
                 "boxNumber": record.boxNumber,
                 "school": record.school,
                 "status": record.status,
+                "photographer": record.photographer,
                 "userId": record.userId,
                 "organizationID": record.organizationID,
                 "timestamp": Timestamp(date: record.timestamp)
@@ -129,8 +130,6 @@ extension FirestoreManager {
                 print("   \(key): \(value) (type: \(type(of: value)))")
             }
             
-            // Note: photographer field is stored in the record but not sent to Firestore
-            // due to strict field validation in security rules
             
             let firestore = Firestore.firestore()
             firestore.collection("jobBoxes").addDocument(data: documentData) { error in
@@ -462,11 +461,12 @@ extension OfflineDataManager {
         cachedRecords.append(record)
         cacheData(data: cachedRecords, forKey: "cachedJobBoxRecords")
         
-        // Create pending operation with only the fields expected by Firestore rules
+        // Create pending operation with all fields for Firestore
         var recordData: [String: Any] = [
             "boxNumber": record.boxNumber,
             "school": record.school,
             "status": record.status,
+            "photographer": record.photographer,
             "userId": record.userId,
             "organizationID": record.organizationID,
             "timestamp": record.timestamp
@@ -477,8 +477,6 @@ extension OfflineDataManager {
             recordData["shiftUid"] = shiftUid
         }
         
-        // Note: photographer field is stored in the record but not sent to Firestore
-        // due to strict field validation in security rules
         
         addPendingOperation(
             type: .add,

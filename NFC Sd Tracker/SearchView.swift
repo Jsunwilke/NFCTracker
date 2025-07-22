@@ -203,10 +203,13 @@ struct SearchView: View {
                 // List of results with pull-to-refresh support.
                 List {
                     if isJobBoxMode {
-                        ForEach(jobBoxSearchResults) { record in
+                        ForEach(Array(jobBoxSearchResults.enumerated()), id: \.offset) { index, record in
                             JobBoxBubbleView(record: record)
                                 .listRowSeparator(.hidden)
                                 .listRowBackground(Color.clear)
+                                .onAppear {
+                                    print("🔍 DEBUG: Displaying JobBox - ID: \(record.id ?? "nil"), BoxNumber: \(record.boxNumber), Photographer: \(record.photographer)")
+                                }
                                 .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                                     Button(role: .destructive) {
                                         jobBoxRecordToDelete = record
@@ -456,6 +459,10 @@ struct SearchView: View {
                 switch result {
                 case .success(let records):
                     let sortedRecords = records.sorted { $0.timestamp > $1.timestamp }
+                    print("🔍 DEBUG: Search returned \(sortedRecords.count) job box records:")
+                    for (index, record) in sortedRecords.enumerated() {
+                        print("  \(index): ID=\(record.id ?? "nil"), BoxNumber=\(record.boxNumber), Photographer=\(record.photographer)")
+                    }
                     jobBoxSearchResults = sortedRecords
                     if sortedRecords.isEmpty {
                         alertMessage = "No job box records found."
