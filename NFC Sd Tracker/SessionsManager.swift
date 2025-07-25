@@ -13,7 +13,6 @@ class SessionsManager: ObservableObject {
     
     private let db = Firestore.firestore()
     private var listener: ListenerRegistration?
-    private var assignedSessionIds: Set<String> = []
     
     private init() {
         // Load cached sessions on initialization
@@ -91,41 +90,9 @@ class SessionsManager: ObservableObject {
                 }
                 
                 // After loading sessions, also load assigned session IDs
-                self.loadAssignedSessionIds(organizationID: organizationID)
+                self.updateAvailableSessions()
             }
         }
-    }
-    
-    // Load assigned session IDs from job boxes
-    func loadAssignedSessionIds(organizationID: String) {
-        // Query all job boxes with status "Packed" that have a shiftUid
-        db.collection("jobBoxes")
-            .whereField("organizationID", isEqualTo: organizationID)
-            .whereField("status", isEqualTo: "Packed")
-            .getDocuments { [weak self] snapshot, error in
-                guard let self = self else { return }
-                
-                if let error = error {
-                    print("Error loading assigned sessions: \(error)")
-                    return
-                }
-                
-                // Extract all shiftUids from packed job boxes
-                var assignedIds = Set<String>()
-                snapshot?.documents.forEach { document in
-                    if let shiftUid = document.data()["shiftUid"] as? String {
-                        assignedIds.insert(shiftUid)
-                    }
-                }
-                
-                DispatchQueue.main.async {
-                    self.assignedSessionIds = assignedIds
-                    print("DEBUG: Found \(assignedIds.count) assigned sessions")
-                    
-                    // Update available sessions
-                    self.updateAvailableSessions()
-                }
-            }
     }
     
     // Update available sessions (within 2 weeks and not assigned)
@@ -135,11 +102,8 @@ class SessionsManager: ObservableObject {
             guard session.isWithinTwoWeeks else { return false }
             
             // Must not be assigned to a job box
-            if let sessionId = session.id {
-                return !assignedSessionIds.contains(sessionId)
-            }
-            
-            return true
+            // Check the hasJobBoxAssigned field (defaults to false if nil)
+            return !(session.hasJobBoxAssigned ?? false)
         }
         
         print("DEBUG: \(availableSessions.count) available sessions out of \(sessions.count) total")

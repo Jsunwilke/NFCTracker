@@ -23,6 +23,8 @@ struct Session: Codable, Identifiable {
     let startTime: String // Format: "07:00"
     let status: String // e.g., "scheduled"
     let updatedAt: Date?
+    let hasJobBoxAssigned: Bool? // Track if session has been assigned to a job box
+    let jobBoxRecordId: String? // Store the ID of the assigned job box
     
     // Computed property to get formatted date and time
     var formattedDateTime: String {

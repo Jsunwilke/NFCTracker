@@ -17,7 +17,7 @@ struct FirestoreRecord: Codable, Identifiable {
 
 struct DropdownRecord: Codable, Identifiable {
     @DocumentID var id: String?
-    let type: String
+    let type: String?
     let value: String
     let organizationID: String?
 }
@@ -400,7 +400,7 @@ class FirestoreManager: ObservableObject {
                     if var cachedDropdowns = OfflineDataManager.shared.getCachedData(forKey: "schools") as [DropdownRecord]? {
                         let newRecord = DropdownRecord(
                             id: UUID().uuidString, // Temporary ID
-                            type: "school",
+                            type: nil,
                             value: schoolName,
                             organizationID: organizationID
                         )
@@ -425,7 +425,7 @@ class FirestoreManager: ObservableObject {
             if var cachedDropdowns = OfflineDataManager.shared.getCachedData(forKey: "schools") as [DropdownRecord]? {
                 let newRecord = DropdownRecord(
                     id: UUID().uuidString, // Temporary ID
-                    type: "school",
+                    type: nil,
                     value: schoolName,
                     organizationID: organizationID
                 )

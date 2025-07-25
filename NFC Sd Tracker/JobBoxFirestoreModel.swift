@@ -140,7 +140,8 @@ extension FirestoreManager {
             
             
             let firestore = Firestore.firestore()
-            firestore.collection("jobBoxes").addDocument(data: documentData) { error in
+            var jobBoxRef: DocumentReference?
+            jobBoxRef = firestore.collection("jobBoxes").addDocument(data: documentData) { error in
                 self.isLoading = false
                 if let error = error {
                     let nsError = error as NSError
@@ -161,6 +162,22 @@ extension FirestoreManager {
                     var cachedRecords = OfflineDataManager.shared.getCachedData(forKey: "cachedJobBoxRecords") as [JobBoxRecord]? ?? []
                     cachedRecords.append(record)
                     OfflineDataManager.shared.cacheData(data: cachedRecords, forKey: "cachedJobBoxRecords")
+                    
+                    // Update the session to mark it as assigned
+                    if let shiftUid = record.shiftUid,
+                       let jobBoxId = jobBoxRef?.documentID {
+                        firestore.collection("sessions").document(shiftUid).updateData([
+                            "hasJobBoxAssigned": true,
+                            "jobBoxRecordId": jobBoxId
+                        ]) { updateError in
+                            if let updateError = updateError {
+                                print("⚠️ Warning: Failed to update session assignment status: \(updateError)")
+                                // Still consider the job box save successful
+                            } else {
+                                print("✅ Successfully updated session \(shiftUid) with job box assignment")
+                            }
+                        }
+                    }
                     
                     completion(.success("Job box record saved successfully"))
                 }
